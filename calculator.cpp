@@ -64,7 +64,7 @@ void Calculator::processCalculator()
     QProcess *pyProc = qobject_cast<QProcess *>(sender());
     QByteArray answer = pyProc->readAllStandardOutput();
 
-    QByteArray cmd = "msg " + id[pyProc] + " The Answer Is: " + answer.trimmed().replace('\n', "\\n");
+    QByteArray cmd = "msg " + id[pyProc] + " \"The Answer Is: " + answer.trimmed().replace('\n', "\\n") + '"';
     messageProcessor->sendCommand(cmd);
 
     endTime.remove(pyProc);
