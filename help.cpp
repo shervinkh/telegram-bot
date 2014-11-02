@@ -38,8 +38,14 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "e.g. !sup delete 2-5\\n"
                               "e.g. !sup remove 5\\n"
                               "e.g. !sup");
+        else if (cmd == "banlist")
+            message = QString("This module can ban some users from using my features in the groups I monitor.\\n"
+                              "Note: Usable only by group's admin\\n"
+                              "e.g. !banlist add 42933206\\n"
+                              "e.g. !banlist delete 42933206\\n"
+                              "e.g. !banlist");
         else
-            message = QString("Current modules are: calc stat help sup\\n"
+            message = QString("Current modules are: calc stat help sup banlist\\n"
                               "Enter \\\"!help the_module\\\" (e.g. !help calc) for more help.");
 
         messageProcessor->sendCommand("msg " + identity.toLatin1() + " \"" + message.toLatin1() + '"');

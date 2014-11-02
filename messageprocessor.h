@@ -13,6 +13,7 @@ class Statistics;
 class Database;
 class Help;
 class Sup;
+class BanList;
 
 class MessageProcessor : public QObject
 {
@@ -31,6 +32,7 @@ private:
     Statistics *stats;
     Help *help;
     Sup *sup;
+    BanList *banlist;
 
     qint64 endDayCron;
     qint64 hourlyCron;
@@ -41,6 +43,7 @@ public:
     void sendCommand(const QByteArray &str);
 
     static qint64 processDate(const QString &str);
+    QString convertToName(qint64 id);
 
 public slots:
     void readData();

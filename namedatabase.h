@@ -18,7 +18,7 @@ private:
     MessageProcessor *messageProcessor;
     Database *database;
 
-    QSet<qint64> monitoringGroups;
+    QMap<qint64, qint64> monitoringGroups;
 
     qint64 lastIdSeen;
 
@@ -28,7 +28,7 @@ public:
     explicit NameDatabase(Database *db, MessageProcessor *mp, QObject *parent = 0);
     void input(const QString &str);
     void refreshDatabase();
-    const QSet<qint64> &groups() const {return monitoringGroups;}
+    const QMap<qint64, qint64> &groups() const {return monitoringGroups;}
     const QMap<qint64, QString> &nameDatabase() const {return data;}
 };
 

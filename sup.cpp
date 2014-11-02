@@ -36,7 +36,7 @@ void Sup::input(const QString &gid, const QString &, const QString &str)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().contains(gidnum) && str.startsWith("!sup"))
+    if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!sup"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
 

@@ -87,7 +87,7 @@ void Statistics::input(const QString &gid, const QString &uid, const QString &st
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 usernum = uid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().contains(gidnum))
+    if (nameDatabase->groups().keys().contains(gidnum))
     {
         ++data[QDate::currentDate().toJulianDay()][gidnum][usernum].count();
         data[QDate::currentDate().toJulianDay()][gidnum][usernum].length() += str.length();
@@ -157,16 +157,7 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
 
                 for (int i = start; i <= end; ++i)
                 {
-                    QString name;
-                    if (nameDatabase->nameDatabase().contains(tempList[i - 1].second))
-                        name = nameDatabase->nameDatabase()[tempList[i - 1].second];
-                    else
-                    {
-                        name = QString("user#%1").arg(tempList[i - 1].second);
-                        nameDatabase->refreshDatabase();
-                    }
-
-                    result += QString("%1- %2 (%3)").arg(i).arg(name)
+                    result += QString("%1- %2 (%3)").arg(i).arg(messageProcessor->convertToName(tempList[i - 1].second))
                               .arg(maxcount ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
 
                     if (i != end)

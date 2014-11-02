@@ -3,6 +3,7 @@
 #include "namedatabase.h"
 #include "statistics.h"
 #include "database.h"
+#include "banlist.h"
 #include "help.h"
 #include "sup.h"
 #include <QtCore>
@@ -31,6 +32,7 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     stats = new Statistics(database, nameDatabase, this, this);
     help = new Help(this, this);
     sup = new Sup(database, nameDatabase, this, this);
+    banlist = new BanList(database, nameDatabase, this, this);
 
     QTimer::singleShot(0, this, SLOT(keepAlive()));
 }
@@ -70,10 +72,19 @@ void MessageProcessor::readData()
 
                 output << "Got From " << identity << ": " << cmd << endl << flush;
 
+                qint64 gidnum = gid.mid(5).toLongLong();
+                qint64 uidnum = uid.mid(5).toLongLong();
+
                 calculator->input(gid, uid, cmd);
                 help->input(gid, uid, cmd);
-                stats->input(gid, uid, cmd);
-                sup->input(gid, uid, cmd);
+
+                if (!banlist->bannedUsers()[gidnum].contains(uidnum))
+                {
+                    stats->input(gid, uid, cmd);
+                    sup->input(gid, uid, cmd);
+                }
+
+                banlist->input(gid, uid, cmd);
             }
         }
     }
@@ -118,4 +129,18 @@ qint64 MessageProcessor::processDate(const QString &str)
         return QDate::currentDate().toJulianDay() - 1;
     else
         return QDate::fromString(str.trimmed(), "yyyy/MM/dd").toJulianDay();
+}
+
+QString MessageProcessor::convertToName(qint64 id)
+{
+    QString name;
+    if (nameDatabase->nameDatabase().contains(id))
+        name = nameDatabase->nameDatabase()[id];
+    else
+    {
+        name = QString("user#%1").arg(id);
+        nameDatabase->refreshDatabase();
+    }
+
+    return name;
 }

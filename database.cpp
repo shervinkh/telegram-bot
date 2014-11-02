@@ -29,7 +29,10 @@ void Database::prepareDatabase()
                   "count INTEGER, length INTEGER, PRIMARY KEY (gid, uid, date))");
     executeQuery(query);
 
-    query.prepare("CREATE TABLE IF NOT EXISTS tf_groups (gid INTEGER PRIMARY KEY)");
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_groups (gid INTEGER PRIMARY KEY, admin_id INTEGER)");
+    executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_banned (gid INTEGER, uid INTEGER, PRIMARY KEY (gid, uid))");
     executeQuery(query);
 
     query.prepare("CREATE TABLE IF NOT EXISTS tf_sup (id INTEGER PRIMARY KEY AUTOINCREMENT, "

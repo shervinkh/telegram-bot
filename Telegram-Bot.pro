@@ -23,7 +23,8 @@ SOURCES += main.cpp \
     namedatabase.cpp \
     signalhandler.cpp \
     help.cpp \
-    sup.cpp
+    sup.cpp \
+    banlist.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -33,4 +34,5 @@ HEADERS += \
     namedatabase.h \
     signalhandler.h \
     help.h \
-    sup.h
+    sup.h \
+    banlist.h

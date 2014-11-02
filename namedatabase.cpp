@@ -8,16 +8,16 @@ NameDatabase::NameDatabase(Database *db, MessageProcessor *mp, QObject *parent) 
     QObject(parent), messageProcessor(mp), database(db)
 {
     QSqlQuery query;
-    query.prepare("SELECT gid FROM tf_groups");
+    query.prepare("SELECT gid, admin_id FROM tf_groups");
     database->executeQuery(query);
 
     while (query.next())
-        monitoringGroups.insert(query.value(0).toLongLong());
+        monitoringGroups[query.value(0).toLongLong()] = query.value(1).toLongLong();
 }
 
 void NameDatabase::refreshDatabase()
 {
-    foreach (qint64 gid, monitoringGroups)
+    foreach (qint64 gid, monitoringGroups.keys())
         messageProcessor->sendCommand("chat_info chat#" + QByteArray::number(gid));
 }
 
