@@ -20,7 +20,7 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
         QString cmd = msg.mid(idx + 1).remove(' ');
 
         QStringList args;
-        args << "-c" << QString("from math import *; print(%1)").arg(cmd);
+        args << "-c" << QString("from math import *; from random import *; print(%1)").arg(cmd);
 
         QProcess *proc = new QProcess(this);
         connect(proc, SIGNAL(finished(int)), this, SLOT(processCalculator()));
