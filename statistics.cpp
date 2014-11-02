@@ -1,0 +1,197 @@
+#include "statistics.h"
+#include "database.h"
+#include "namedatabase.h"
+#include "messageprocessor.h"
+#include <QSqlQuery>
+#include <QVariant>
+#include <QtCore>
+
+Statistics::Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
+    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
+{
+    loadData();
+}
+
+Statistics::~Statistics()
+{
+    saveData();
+}
+
+void Statistics::loadData()
+{
+    data.clear();
+
+    QSqlQuery query;
+
+    query.prepare("SELECT gid, uid, date, count, length FROM tf_userstat");
+    database->executeQuery(query);
+
+    while (query.next())
+    {
+        qint64 gid = query.value(0).toLongLong();
+        qint64 uid = query.value(1).toLongLong();
+        qint64 date = query.value(2).toLongLong();
+        qint64 cnt = query.value(3).toLongLong();
+        qint64 len = query.value(4).toLongLong();
+
+        data[date][gid][uid] = UserStatsData(cnt, len);
+    }
+}
+
+void Statistics::saveData()
+{
+    QSqlDatabase::database().transaction();
+
+    QMapIterator<qint64, Groups> datesIter(data);
+    while (datesIter.hasNext())
+    {
+        datesIter.next();
+        qint64 date = datesIter.key();
+
+        QMapIterator<qint64, Users> groupsIter(datesIter.value());
+        while (groupsIter.hasNext())
+        {
+            groupsIter.next();
+            qint64 gid = groupsIter.key();
+
+            QMapIterator<qint64, UserStatsData> statsIter(groupsIter.value());
+            while (statsIter.hasNext())
+            {
+                statsIter.next();
+
+                QSqlQuery query;
+                query.prepare("INSERT OR IGNORE INTO tf_userstat (gid, uid, date) "
+                              "VALUES(:gid, :uid, :date)");
+                query.bindValue(":gid", gid);
+                query.bindValue(":uid", statsIter.key());
+                query.bindValue(":date", date);
+                database->executeQuery(query);
+
+                query.prepare("UPDATE tf_userstat SET count=:cnt, length=:len WHERE gid=:gid AND "
+                              "uid=:uid AND date=:date");
+                query.bindValue(":cnt", statsIter.value().count());
+                query.bindValue(":len", statsIter.value().length());
+                query.bindValue(":gid", gid);
+                query.bindValue(":uid", statsIter.key());
+                query.bindValue(":date", date);
+                database->executeQuery(query);
+            }
+        }
+    }
+
+    QSqlDatabase::database().commit();
+}
+
+void Statistics::input(const QString &gid, const QString &uid, const QString &str)
+{
+    qint64 gidnum = gid.mid(5).toLongLong();
+    qint64 usernum = uid.mid(5).toLongLong();
+
+    if (nameDatabase->groups().contains(gidnum))
+    {
+        ++data[QDate::currentDate().toJulianDay()][gidnum][usernum].count();
+        data[QDate::currentDate().toJulianDay()][gidnum][usernum].length() += str.length();
+        ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
+        data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
+
+        if (str.startsWith("!stat"))
+        {
+            QStringList args = str.split(' ', QString::SkipEmptyParts);
+            if (args.size() >= 3)
+                giveStat(gid.mid(5).toLongLong(), args[1], args[2], args.size() > 3 ? args[3] : "");
+        }
+    }
+}
+
+void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit)
+{
+    qint64 dateNum = MessageProcessor::processDate(date);
+
+    if (dateNum > 0 && data.contains(dateNum) && data[dateNum].contains(gid))
+    {
+        QString result;
+
+        if (factor.toLower().startsWith("sum"))
+            result = QString("Statistics Summary For %1:\\nTotal Posts' Count: %2\\n"
+                             "Total Posts' Length: %3").arg(date)
+                     .arg(data[dateNum][gid][0].count()).arg(data[dateNum][gid][0].length());
+        else if (factor.toLower().startsWith("maxc") || factor.toLower().startsWith("maxl"))
+        {
+            bool maxcount = factor.toLower().startsWith("maxc");
+            int start, end;
+            int idx = limit.indexOf('-');
+            bool ok1, ok2;
+
+            if (idx == -1)
+            {
+                start = end = limit.toInt(&ok1);
+                ok2 = true;
+            }
+            else
+            {
+                start = limit.mid(0, idx).toInt(&ok1);
+                end = limit.mid(idx + 1).toInt(&ok2);
+            }
+
+            if (ok1 && ok2 && start > 0 && end > 0 && end >= start)
+            {
+                tempList.clear();
+
+                QMapIterator<qint64, UserStatsData> usersIter(data[dateNum][gid]);
+                while (usersIter.hasNext())
+                {
+                    usersIter.next();
+
+                    if (usersIter.key() != 0)
+                        tempList.append(DataPair(usersIter.value(), usersIter.key()));
+                }
+
+                start = qMin(start, tempList.length());
+                end = qMin(end, tempList.length());
+
+                qSort(tempList.begin(), tempList.end(),
+                      maxcount ? compareByCount : compareByLength);
+
+                result = QString("People with most post %1 on %2:\\n")
+                        .arg(maxcount ? "count" : "length").arg(date);
+
+                for (int i = start; i <= end; ++i)
+                {
+                    QString name;
+                    if (nameDatabase->nameDatabase().contains(tempList[i - 1].second))
+                        name = nameDatabase->nameDatabase()[tempList[i - 1].second];
+                    else
+                    {
+                        name = QString("user#%1").arg(tempList[i - 1].second);
+                        nameDatabase->refreshDatabase();
+                    }
+
+                    result += QString("%1- %2 (%3)").arg(i).arg(name)
+                              .arg(maxcount ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
+
+                    if (i != end)
+                        result += "\\n";
+                }
+            }
+        }
+
+        if (dateNum == QDate::currentDate().toJulianDay())
+            result += QString("\\nSo far");
+
+        if (!result.isNull())
+            messageProcessor->sendCommand("msg chat#" + QByteArray::number(gid) +
+                                          " \"" + result.toLatin1() + '"');
+    }
+}
+
+void Statistics::cleanUpBefore(qint64 date)
+{
+    foreach (qint64 d, data.keys())
+        if (d < date)
+            data.remove(d);
+
+    QSqlQuery query;
+    query.prepare("DELETE FROM tf_userstat WHERE date < :date");
+    query.bindValue(":date", date);
+    database->executeQuery(query);
+}
