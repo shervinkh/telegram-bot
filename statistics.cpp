@@ -166,7 +166,7 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
             }
         }
 
-        if (dateNum == QDate::currentDate().toJulianDay())
+        if (!result.isNull() && dateNum == QDate::currentDate().toJulianDay())
             result += QString("\\nSo far");
 
         if (!result.isNull())

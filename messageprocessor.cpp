@@ -92,7 +92,8 @@ void MessageProcessor::readData()
 
 void MessageProcessor::keepAlive()
 {
-    output << "Keeping alive..." << endl << flush;
+    output << QString("Keeping alive... (%1)").arg(QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss"))
+           << endl << flush;
     sendCommand("main_session");
 
     if (QTime::currentTime().hour() != hourlyCron)
