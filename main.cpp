@@ -7,8 +7,8 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    if (QCoreApplication::arguments().length() < 3)
-        qFatal("Specify telegram and python3 executable path.");
+    if (QCoreApplication::arguments().length() < 2)
+        qFatal("Specify telegram-cli executable path.");
 
     SignalHandler signalHandler;
     MessageProcessor MP;

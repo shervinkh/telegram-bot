@@ -28,11 +28,12 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
                 QString cmd = msg.mid(idx);
 
                 QStringList args;
-                args << "-c" << QString("from math import *; from random import *; print(%1)").arg(cmd);
+                args << "-u" << "noone" << "./run.sh"
+                     << QString("from math import *; from random import *; print(%1)").arg(cmd);
 
                 QProcess *proc = new QProcess(this);
                 connect(proc, SIGNAL(finished(int)), this, SLOT(processCalculator()));
-                proc->start(QCoreApplication::arguments()[2], args);
+                proc->start("sudo", args);
 
                 endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
 
@@ -46,7 +47,6 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
 void Calculator::checkEndTime()
 {
     QMapIterator<QProcess *, qint64> iter(endTime);
-    QList<QProcess *> toDelete;
 
     while (iter.hasNext())
     {
@@ -54,16 +54,10 @@ void Calculator::checkEndTime()
 
         if (QDateTime::currentMSecsSinceEpoch() >= iter.value())
         {
-            iter.key()->kill();
-            iter.key()->deleteLater();
-            toDelete.append(iter.key());
+            QStringList args;
+            args << "-u" << "noone" << "pkill" << "-P" << iter.key()->readAllStandardError().trimmed();
+            QProcess::execute("sudo", args);
         }
-    }
-
-    foreach (QProcess *proc, toDelete)
-    {
-        endTime.remove(proc);
-        id.remove(proc);
     }
 
     checkEndTimer->start(timeLimit);
@@ -73,6 +67,8 @@ void Calculator::processCalculator()
 {
     QProcess *pyProc = qobject_cast<QProcess *>(sender());
     QByteArray answer = pyProc->readAllStandardOutput();
+
+    qDebug() << answer.length() << " Ready ";
 
     QByteArray cmd = "msg " + id[pyProc] + " \"The Answer Is: "
                      + answer.trimmed().replace('\n', "\\n").replace('"', "\\\"") + '"';
