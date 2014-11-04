@@ -25,7 +25,7 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
 
             if (idx < msg.size())
             {
-                QString cmd = msg.mid(idx);
+                QString cmd = msg.mid(idx).trimmed().replace('"', "\\\"");
 
                 QStringList args;
                 args << "-u" << "noone" << "./run.sh"
