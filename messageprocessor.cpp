@@ -109,7 +109,7 @@ void MessageProcessor::keepAlive()
     {
         output << "Running End-day Cron..." << endl << flush;
         endDayCron = QDate::currentDate().toJulianDay();
-        foreach (qint64 gid, nameDatabase->groups())
+        foreach (qint64 gid, nameDatabase->groups().keys())
             stats->giveStat(gid, "Yesterday", "summary");
         stats->cleanUpBefore(QDate::currentDate().toJulianDay() - 3);
     }
