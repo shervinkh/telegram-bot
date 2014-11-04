@@ -17,19 +17,29 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
     if (msg.startsWith("!calc"))
     {
         int idx = msg.indexOf(' ');
-        QString cmd = msg.mid(idx + 1).remove(' ');
 
-        QStringList args;
-        args << "-c" << QString("from math import *; from random import *; print(%1)").arg(cmd);
+        if (idx != -1)
+        {
+            while (idx < msg.size() && msg[idx] == ' ')
+                ++idx;
 
-        QProcess *proc = new QProcess(this);
-        connect(proc, SIGNAL(finished(int)), this, SLOT(processCalculator()));
-        proc->start(QCoreApplication::arguments()[2], args);
+            if (idx < msg.size())
+            {
+                QString cmd = msg.mid(idx);
 
-        endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
+                QStringList args;
+                args << "-c" << QString("from math import *; from random import *; print(%1)").arg(cmd);
 
-        QString identity = gid.isNull() ? uid : gid;
-        id[proc] = identity.toLatin1();
+                QProcess *proc = new QProcess(this);
+                connect(proc, SIGNAL(finished(int)), this, SLOT(processCalculator()));
+                proc->start(QCoreApplication::arguments()[2], args);
+
+                endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
+
+                QString identity = gid.isNull() ? uid : gid;
+                id[proc] = identity.toLatin1();
+            }
+        }
     }
 }
 
@@ -64,7 +74,8 @@ void Calculator::processCalculator()
     QProcess *pyProc = qobject_cast<QProcess *>(sender());
     QByteArray answer = pyProc->readAllStandardOutput();
 
-    QByteArray cmd = "msg " + id[pyProc] + " \"The Answer Is: " + answer.trimmed().replace('\n', "\\n") + '"';
+    QByteArray cmd = "msg " + id[pyProc] + " \"The Answer Is: "
+                     + answer.trimmed().replace('\n', "\\n").replace('"', "\\\"") + '"';
     messageProcessor->sendCommand(cmd);
 
     endTime.remove(pyProc);
