@@ -104,14 +104,13 @@ void Sup::input(const QString &gid, const QString &, const QString &str)
                 for (int i = 0; i < data[gidnum].size(); ++i)
                 {
                     message += QString("%1- %2").arg(i + 1).arg(data[gidnum][i].text());
-
                     if (i != data[gidnum].size() - 1)
                         message += "\\n";
                 }
             }
         }
 
-        messageProcessor->sendCommand("msg " + gid.toLatin1() + " \"" + message.toLatin1() + '"');
+        messageProcessor->sendCommand("msg " + gid.toLatin1() + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
     }
 }
 
