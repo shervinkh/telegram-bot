@@ -94,7 +94,7 @@ void Statistics::input(const QString &gid, const QString &uid, const QString &st
         ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
         data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
 
-        if (str.startsWith("!stat"))
+        if (str.startsWith("!stat") && nameDatabase->groups().contains(gidnum) && usernum == nameDatabase->groups()[gidnum])
         {
             QStringList args = str.split(' ', QString::SkipEmptyParts);
             if (args.size() >= 3)
@@ -119,18 +119,28 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
         {
             bool maxcount = factor.toLower().startsWith("maxc");
             int start, end;
-            int idx = limit.indexOf('-');
             bool ok1, ok2;
 
-            if (idx == -1)
+            if (limit.toLower().startsWith("all"))
             {
-                start = end = limit.toInt(&ok1);
-                ok2 = true;
+                start = 1;
+                end = data[dateNum][gid].size();
+                ok1 = ok2 = true;
             }
             else
             {
-                start = limit.mid(0, idx).toInt(&ok1);
-                end = limit.mid(idx + 1).toInt(&ok2);
+                int idx = limit.indexOf('-');
+
+                if (idx == -1)
+                {
+                    start = end = limit.toInt(&ok1);
+                    ok2 = true;
+                }
+                else
+                {
+                    start = limit.mid(0, idx).toInt(&ok1);
+                    end = limit.mid(idx + 1).toInt(&ok2);
+                }
             }
 
             if (ok1 && ok2 && start > 0 && end > 0 && end >= start)

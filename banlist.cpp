@@ -9,6 +9,7 @@
 BanList::BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
     QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
 {
+    loadData();
 }
 
 void BanList::loadData()
@@ -83,12 +84,15 @@ void BanList::input(const QString &gid, const QString &uid, const QString &str)
                 message = "Noone!";
             else
             {
-                for (int i = 0; i < banned[gidnum].size(); ++i)
+                int i = 0;
+                foreach (qint64 banid, banned[gidnum])
                 {
-                    message += QString("%1- %2").arg(i + 1).arg(messageProcessor->convertToName(uidnum));
+                    message += QString("%1- %2").arg(i + 1).arg(messageProcessor->convertToName(banid));
 
                     if (i != banned[gidnum].size() - 1)
                         message += "\\n";
+
+                    ++i;
                 }
             }
         }

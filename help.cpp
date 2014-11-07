@@ -26,6 +26,7 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "e.g. !help");
         else if (cmd == "stat")
             message = QString("This module gathers statistical data from the groups I monitor\\n"
+                              "Note: Usable only by group's admin\\n"
                               "Usage: !stat date operation limit\\n"
                               "e.g. !stat Today summary\\n"
                               "e.g. !stat Yesterday maxlength 1-10\\n"

@@ -79,10 +79,9 @@ void MessageProcessor::readData()
                 help->input(gid, uid, cmd);
 
                 if (!banlist->bannedUsers()[gidnum].contains(uidnum))
-                {
-                    stats->input(gid, uid, cmd);
                     sup->input(gid, uid, cmd);
-                }
+
+                stats->input(gid, uid, cmd);
 
                 banlist->input(gid, uid, cmd);
             }
@@ -110,7 +109,11 @@ void MessageProcessor::keepAlive()
         output << "Running End-day Cron..." << endl << flush;
         endDayCron = QDate::currentDate().toJulianDay();
         foreach (qint64 gid, nameDatabase->groups().keys())
+        {
             stats->giveStat(gid, "Yesterday", "summary");
+            stats->giveStat(gid, "Yesterday", "maxcount", "all");
+            stats->giveStat(gid, "Yesterday", "maxlength", "all");
+        }
         stats->cleanUpBefore(QDate::currentDate().toJulianDay() - 3);
     }
 
