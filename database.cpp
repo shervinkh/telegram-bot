@@ -38,4 +38,8 @@ void Database::prepareDatabase()
     query.prepare("CREATE TABLE IF NOT EXISTS tf_sup (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                   "gid INTEGER, text TEXT)");
     executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_polls (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                  "gid INTEGER, title TEXT, multi_choice BOOLEAN, options TEXT)");
+    executeQuery(query);
 }

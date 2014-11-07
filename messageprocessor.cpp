@@ -5,6 +5,7 @@
 #include "database.h"
 #include "banlist.h"
 #include "help.h"
+#include "poll.h"
 #include "sup.h"
 #include <QtCore>
 
@@ -33,6 +34,7 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     help = new Help(this, this);
     sup = new Sup(database, nameDatabase, this, this);
     banlist = new BanList(database, nameDatabase, this, this);
+    poll = new Poll(database, nameDatabase, this, this);
 
     QTimer::singleShot(0, this, SLOT(keepAlive()));
 }
@@ -79,7 +81,10 @@ void MessageProcessor::readData()
                 help->input(gid, uid, cmd);
 
                 if (!banlist->bannedUsers()[gidnum].contains(uidnum))
+                {
                     sup->input(gid, uid, cmd);
+                    poll->input(gid, uid, cmd);
+                }
 
                 stats->input(gid, uid, cmd);
 
@@ -100,6 +105,8 @@ void MessageProcessor::keepAlive()
         output << "Running Hourly Cron..." << endl << flush;
         hourlyCron = QTime::currentTime().hour();
         nameDatabase->refreshDatabase();
+        stats->saveData();
+        poll->saveData();
     }
 
     if (endDayCron == -1)

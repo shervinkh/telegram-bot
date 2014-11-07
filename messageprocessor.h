@@ -14,6 +14,7 @@ class Database;
 class Help;
 class Sup;
 class BanList;
+class Poll;
 
 class MessageProcessor : public QObject
 {
@@ -33,6 +34,7 @@ private:
     Help *help;
     Sup *sup;
     BanList *banlist;
+    Poll *poll;
 
     qint64 endDayCron;
     qint64 hourlyCron;

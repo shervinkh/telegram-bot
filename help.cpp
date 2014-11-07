@@ -45,10 +45,27 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "e.g. !banlist add 42933206\\n"
                               "e.g. !banlist delete 42933206\\n"
                               "e.g. !banlist");
+        else if (cmd == "poll")
+            message = QString("This module can be used to create polls. (Single-Choice and Multi-Choice)\\n"
+                              "Single-Choice means each user can vote for one option. Multi-Choice means each "
+                              "user can vote for any number of options.\\n"
+                              "Note: Currently title and options with multiple lines aren't supported\\n"
+                              "e.g. !poll create Are you OK? (Creates Single-Choice poll)\\n"
+                              "e.g. !poll create_multi Where are you? (Creates Multi-Choice poll)\\n"
+                              "e.g. !poll add_option poll_id option\\n"
+                              "e.g. !poll delete_option poll_id option_number\\n"
+                              "e.g. !poll terminate poll_id (Deletes a poll)\\n"
+                              "e.g. !poll list\\n"
+                              "e.g. !poll vote poll_id option_number\\n"
+                              "e.g. !poll unvote poll_id (option_number) (option_number only in Multi-Choice polls)\\n"
+                              "e.g. !poll show poll_id\\n"
+                              "e.g. !poll result poll_id\\n"
+                              "e.g. !poll who poll_id option_number (People voted on an option)");
         else
-            message = QString("Current modules are: calc stat help sup banlist\\n"
-                              "Enter \\\"!help the_module\\\" (e.g. !help calc) for more help.");
+            message = QString("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\\n"
+                              "Current modules are: calc stat help sup banlist poll\\n"
+                              "Enter \"!help the_module\" (e.g. !help calc) for more help.");
 
-        messageProcessor->sendCommand("msg " + identity.toLatin1() + " \"" + message.toLatin1() + '"');
+        messageProcessor->sendCommand("msg " + identity.toLatin1() + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
     }
 }

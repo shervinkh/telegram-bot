@@ -2,6 +2,7 @@
 #include <QStringList>
 #include "messageprocessor.h"
 #include "signalhandler.h"
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {

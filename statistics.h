@@ -45,7 +45,6 @@ private:
     MessageProcessor *messageProcessor;
 
     void loadData();
-    void saveData();
 
     static bool compareByCount(const DataPair &a, const DataPair &b)
     {
@@ -63,6 +62,7 @@ public:
     void input(const QString &gid, const QString &uid, const QString &str);
     void giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit = QString());
     void cleanUpBefore(qint64 date);
+    void saveData();
 
 public slots:
 

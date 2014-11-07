@@ -24,7 +24,8 @@ SOURCES += main.cpp \
     signalhandler.cpp \
     help.cpp \
     sup.cpp \
-    banlist.cpp
+    banlist.cpp \
+    poll.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -35,4 +36,5 @@ HEADERS += \
     signalhandler.h \
     help.h \
     sup.h \
-    banlist.h
+    banlist.h \
+    poll.h

@@ -94,7 +94,7 @@ void Statistics::input(const QString &gid, const QString &uid, const QString &st
         ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
         data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
 
-        if (str.startsWith("!stat") && nameDatabase->groups().contains(gidnum) && usernum == nameDatabase->groups()[gidnum])
+        if (str.startsWith("!stat") && usernum == nameDatabase->groups()[gidnum])
         {
             QStringList args = str.split(' ', QString::SkipEmptyParts);
             if (args.size() >= 3)
