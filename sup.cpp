@@ -32,7 +32,7 @@ void Sup::loadData()
     }
 }
 
-void Sup::input(const QString &gid, const QString &, const QString &str)
+void Sup::input(const QString &gid, const QString &uid, const QString &str)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
 
@@ -41,6 +41,7 @@ void Sup::input(const QString &gid, const QString &, const QString &str)
         QStringList args = str.split(' ', QString::SkipEmptyParts);
 
         QString message;
+        bool pm = false;
 
         if (args.size() > 2 && (args[1].toLower().startsWith("del") || args[1].toLower().startsWith("rem")))
         {
@@ -97,6 +98,8 @@ void Sup::input(const QString &gid, const QString &, const QString &str)
         }
         else
         {
+            pm = args.size() > 1 && args[1].toLower().startsWith("pm");
+
             if (data[gidnum].isEmpty())
                 message = "Nothing important!";
             else
@@ -110,7 +113,8 @@ void Sup::input(const QString &gid, const QString &, const QString &str)
             }
         }
 
-        messageProcessor->sendCommand("msg " + gid.toLatin1() + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
+        QByteArray sendee = pm ? uid.toLatin1() : gid.toLatin1();
+        messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
     }
 }
 

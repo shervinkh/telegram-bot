@@ -30,6 +30,7 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "Usage: !stat date operation limit\\n"
                               "e.g. !stat Today summary\\n"
                               "e.g. !stat Yesterday maxlength 1-10\\n"
+                              "e.g. !stat Today maxdensity all\\n"
                               "e.g. !stat 2014/01/01 maxcount 2");
         else if (cmd == "sup")
             message = QString("This module can keep a bunch of important things happening on the "
@@ -38,6 +39,7 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "e.g. !sup add message\\n"
                               "e.g. !sup delete 2-5\\n"
                               "e.g. !sup remove 5\\n"
+                              "e.g. !sup pm\\n"
                               "e.g. !sup");
         else if (cmd == "banlist")
             message = QString("This module can ban some users from using my features in the groups I monitor.\\n"

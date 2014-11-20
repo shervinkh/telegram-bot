@@ -115,9 +115,10 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
             result = QString("Statistics Summary For %1:\\nTotal Posts' Count: %2\\n"
                              "Total Posts' Length: %3").arg(date)
                      .arg(data[dateNum][gid][0].count()).arg(data[dateNum][gid][0].length());
-        else if (factor.toLower().startsWith("maxc") || factor.toLower().startsWith("maxl"))
+        else if (factor.toLower().startsWith("maxc") || factor.toLower().startsWith("maxl")
+                 || factor.toLower().startsWith("maxd"))
         {
-            bool maxcount = factor.toLower().startsWith("maxc");
+            int type = factor.toLower().startsWith("maxc") ? -1 : factor.toLower().startsWith("maxd");
             int start, end;
             bool ok1, ok2;
 
@@ -160,15 +161,21 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                 end = qMin(end, tempList.length());
 
                 qSort(tempList.begin(), tempList.end(),
-                      maxcount ? compareByCount : compareByLength);
+                      (type == -1) ? compareByCount : (type ? compareByDensity : compareByLength));
 
                 result = QString("People with most post %1 on %2:\\n")
-                        .arg(maxcount ? "count" : "length").arg(date);
+                        .arg((type == -1) ? "count" : (type ? "density" : "length")).arg(date);
 
                 for (int i = start; i <= end; ++i)
                 {
+                    QString number;
+                    if (type == 1)
+                        number = QString::number(static_cast<qreal>(tempList[i - 1].first.length()) / tempList[i - 1].first.count(), 'f', 2);
+                    else
+                        number = QString::number((type == -1) ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
+
                     result += QString("%1- %2 (%3)").arg(i).arg(messageProcessor->convertToName(tempList[i - 1].second))
-                              .arg(maxcount ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
+                              .arg(number);
 
                     if (i != end)
                         result += "\\n";

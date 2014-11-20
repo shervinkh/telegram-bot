@@ -44,7 +44,7 @@ private:
 
 public:
     explicit Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &, const QString &str);
+    void input(const QString &gid, const QString &uid, const QString &str);
 
 public slots:
 

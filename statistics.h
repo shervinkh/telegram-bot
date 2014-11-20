@@ -56,6 +56,12 @@ private:
         return a.first.length() > b.first.length();
     }
 
+    static bool compareByDensity(const DataPair &a, const DataPair &b)
+    {
+        return (static_cast<qreal>(a.first.length()) / a.first.count()) >
+               (static_cast<qreal>(b.first.length()) / b.first.count());
+    }
+
 public:
     explicit Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
     ~Statistics();

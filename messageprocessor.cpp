@@ -120,6 +120,7 @@ void MessageProcessor::keepAlive()
             stats->giveStat(gid, "Yesterday", "summary");
             stats->giveStat(gid, "Yesterday", "maxcount", "all");
             stats->giveStat(gid, "Yesterday", "maxlength", "all");
+            stats->giveStat(gid, "Yesterday", "maxdensity", "all");
         }
         stats->cleanUpBefore(QDate::currentDate().toJulianDay() - 3);
     }
