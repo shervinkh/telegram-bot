@@ -25,7 +25,8 @@ SOURCES += main.cpp \
     help.cpp \
     sup.cpp \
     banlist.cpp \
-    poll.cpp
+    poll.cpp \
+    broadcast.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -37,4 +38,5 @@ HEADERS += \
     help.h \
     sup.h \
     banlist.h \
-    poll.h
+    poll.h \
+    broadcast.h

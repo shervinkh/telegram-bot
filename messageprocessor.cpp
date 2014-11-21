@@ -2,6 +2,7 @@
 #include "calculator.h"
 #include "namedatabase.h"
 #include "statistics.h"
+#include "broadcast.h"
 #include "database.h"
 #include "banlist.h"
 #include "help.h"
@@ -35,6 +36,7 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     sup = new Sup(database, nameDatabase, this, this);
     banlist = new BanList(database, nameDatabase, this, this);
     poll = new Poll(database, nameDatabase, this, this);
+    broadcast = new Broadcast(nameDatabase, this, this);
 
     QTimer::singleShot(0, this, SLOT(keepAlive()));
 }
@@ -87,8 +89,8 @@ void MessageProcessor::readData()
                 }
 
                 stats->input(gid, uid, cmd);
-
                 banlist->input(gid, uid, cmd);
+                broadcast->input(gid, uid, cmd);
             }
         }
     }

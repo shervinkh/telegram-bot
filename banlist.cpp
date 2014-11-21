@@ -49,7 +49,7 @@ void BanList::input(const QString &gid, const QString &uid, const QString &str)
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().keys().contains(gidnum) && nameDatabase->groups()[gidnum] == uidnum
+    if (nameDatabase->groups().keys().contains(gidnum) && nameDatabase->groups()[gidnum].first == uidnum
         && str.startsWith("!banlist"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);

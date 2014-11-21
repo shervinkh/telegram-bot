@@ -11,25 +11,31 @@ class Database;
 class NameDatabase : public QObject
 {
     Q_OBJECT
+public:
+    typedef QSet<qint64> UserList;
+    typedef QPair<qint64, QString> GroupData;
+
 private:
     QMap<qint64, QString> data;
-    QSet<qint64> ids;
+    QMap<qint64, UserList> ids;
 
     MessageProcessor *messageProcessor;
     Database *database;
 
-    QMap<qint64, qint64> monitoringGroups;
+    QMap<qint64, GroupData> monitoringGroups;
 
-    qint64 lastIdSeen;
+    qint64 lastGidSeen;
+    qint64 lastUidSeen;
 
-    void getNames();
+    void getNames(qint64 gid);
 
 public:
     explicit NameDatabase(Database *db, MessageProcessor *mp, QObject *parent = 0);
     void input(const QString &str);
     void refreshDatabase();
-    const QMap<qint64, qint64> &groups() const {return monitoringGroups;}
+    const QMap<qint64, GroupData> &groups() const {return monitoringGroups;}
     const QMap<qint64, QString> &nameDatabase() const {return data;}
+    UserList userList(qint64 gid) const {return ids[gid];}
 };
 
 #endif // NAMEDATABASE_H
