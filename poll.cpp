@@ -341,7 +341,7 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
             }
 
             if (!message.isNull())
-                messageProcessor->sendCommand("msg " + gid.toLatin1() + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
+                messageProcessor->sendCommand("msg " + gid.toUtf8() + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
         }
     }
 }

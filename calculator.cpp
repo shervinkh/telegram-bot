@@ -38,7 +38,7 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
                 endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
 
                 QString identity = gid.isNull() ? uid : gid;
-                id[proc] = identity.toLatin1();
+                id[proc] = identity.toUtf8();
             }
         }
     }

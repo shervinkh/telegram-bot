@@ -35,9 +35,9 @@ void Broadcast::input(const QString &gid, const QString &uid, const QString &str
 
                 int numMemebers = nameDatabase->userList(gidnum).size();
 
-                messageProcessor->sendCommand("msg " + gid.toLatin1() +
+                messageProcessor->sendCommand("msg " + gid.toUtf8() +
                                               QString(" \"Sent broadcast message to %1 group member(s)!\"")
-                                              .arg(numMemebers).toLatin1());
+                                              .arg(numMemebers).toUtf8());
             }
         }
     }
@@ -46,5 +46,5 @@ void Broadcast::input(const QString &gid, const QString &uid, const QString &str
 void Broadcast::sendMessage(qint64 uid, QString str)
 {
     messageProcessor->sendCommand("msg user#" + QByteArray::number(uid) + " \"" +
-                                  str.replace('"', "\\\"").toLatin1() + '"');
+                                  str.replace('"', "\\\"").toUtf8() + '"');
 }

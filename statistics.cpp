@@ -188,7 +188,7 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
 
         if (!result.isNull())
             messageProcessor->sendCommand("msg chat#" + QByteArray::number(gid) +
-                                          " \"" + result.toLatin1() + '"');
+                                          " \"" + result.toUtf8() + '"');
     }
 }
 

@@ -72,6 +72,6 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "Current modules are: calc stat help sup banlist poll broadcast\\n"
                               "Enter \"!help the_module\" (e.g. !help calc) for more help.");
 
-        messageProcessor->sendCommand("msg " + identity.toLatin1() + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
+        messageProcessor->sendCommand("msg " + identity.toUtf8() + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
     }
 }

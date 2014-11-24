@@ -113,8 +113,8 @@ void Sup::input(const QString &gid, const QString &uid, const QString &str)
             }
         }
 
-        QByteArray sendee = pm ? uid.toLatin1() : gid.toLatin1();
-        messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toLatin1() + '"');
+        QByteArray sendee = pm ? uid.toUtf8() : gid.toUtf8();
+        messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
     }
 }
 

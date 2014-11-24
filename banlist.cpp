@@ -97,6 +97,6 @@ void BanList::input(const QString &gid, const QString &uid, const QString &str)
             }
         }
 
-        messageProcessor->sendCommand("msg " + gid.toLatin1() + " \"" + message.toLatin1() + '"');
+        messageProcessor->sendCommand("msg " + gid.toUtf8() + " \"" + message.toUtf8() + '"');
     }
 }
