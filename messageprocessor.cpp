@@ -50,7 +50,7 @@ void MessageProcessor::readData()
 {
     while (proc->canReadLine())
     {
-        QString str = proc->readLine();
+        QString str = QString::fromUtf8(proc->readLine());
         nameDatabase->input(str);
 
         if (str.startsWith('['))
@@ -74,7 +74,7 @@ void MessageProcessor::readData()
 
                 QString identity = gid.isNull() ? uid : gid;
 
-                output << "Got From " << identity << ": " << cmd << endl << flush;
+                output << "Got From " << identity << ": " << cmd << ' ' << endl << flush;
 
                 qint64 gidnum = gid.mid(5).toLongLong();
                 qint64 uidnum = uid.mid(5).toLongLong();
