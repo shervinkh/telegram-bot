@@ -67,9 +67,12 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
             message = QString("This module can broadcast one important message to all group members.\\n"
                               "Note: Usable only by group's admin\\n"
                               "e.g. !broadcast message");
+        else if (cmd == "tree")
+            message = QString("This module shows a graph of group members.\\n"
+                              "e.g. !tree");
         else
             message = QString("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\\n"
-                              "Current modules are: calc stat help sup banlist poll broadcast\\n"
+                              "Current modules are: calc stat help sup banlist poll broadcast tree\\n"
                               "Enter \"!help the_module\" (e.g. !help calc) for more help.");
 
         messageProcessor->sendCommand("msg " + identity.toUtf8() + " \"" + message.replace('"', "\\\"").toUtf8() + '"');

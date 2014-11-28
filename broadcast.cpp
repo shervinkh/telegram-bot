@@ -30,7 +30,7 @@ void Broadcast::input(const QString &gid, const QString &uid, const QString &str
                                    .arg(nameDatabase->groups()[gidnum].second)
                                    .arg(msg);
 
-                foreach (qint64 uid, nameDatabase->userList(gidnum))
+                foreach (qint64 uid, nameDatabase->userList(gidnum).keys())
                     sendMessage(uid, totalMsg);
 
                 int numMemebers = nameDatabase->userList(gidnum).size();

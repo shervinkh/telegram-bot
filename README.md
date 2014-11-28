@@ -28,3 +28,5 @@ After the first run exit and insert telegram group (chat) IDs you want
 the bot to manage and their admins' user ID in the tf_groups table
 (with two columns gid and admin_id) in tf.db sqlite database and then
 rerun the bot.
+
+You need "graphviz" for the tree module!

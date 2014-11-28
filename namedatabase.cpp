@@ -29,7 +29,10 @@ void NameDatabase::input(const QString &str)
 {
     if (str.startsWith("\t\t"))
     {
-        ids[lastGidSeen].insert(str.mid(7, 8).toLongLong());
+        qint64 user = str.mid(7, 8).toLongLong();
+        qint64 parent = str.mid(32, 8).toLongLong();
+
+        ids[lastGidSeen][user] = parent;
         if (str.indexOf("admin") != -1)
             getNames(lastGidSeen);
     }
@@ -56,6 +59,6 @@ void NameDatabase::input(const QString &str)
 
 void NameDatabase::getNames(qint64 gid)
 {
-    foreach (qint64 id, ids[gid])
+    foreach (qint64 id, ids[gid].keys())
         messageProcessor->sendCommand("user_info user#" + QByteArray::number(id));
 }

@@ -12,7 +12,7 @@ class NameDatabase : public QObject
 {
     Q_OBJECT
 public:
-    typedef QSet<qint64> UserList;
+    typedef QMap<qint64, qint64> UserList;
     typedef QPair<qint64, QString> GroupData;
 
 private:

@@ -16,6 +16,7 @@ class Sup;
 class BanList;
 class Poll;
 class Broadcast;
+class Tree;
 
 class MessageProcessor : public QObject
 {
@@ -37,6 +38,7 @@ private:
     BanList *banlist;
     Poll *poll;
     Broadcast *broadcast;
+    Tree *tree;
 
     qint64 endDayCron;
     qint64 hourlyCron;

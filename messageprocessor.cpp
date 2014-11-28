@@ -7,6 +7,7 @@
 #include "banlist.h"
 #include "help.h"
 #include "poll.h"
+#include "tree.h"
 #include "sup.h"
 #include <QtCore>
 
@@ -37,6 +38,7 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     banlist = new BanList(database, nameDatabase, this, this);
     poll = new Poll(database, nameDatabase, this, this);
     broadcast = new Broadcast(nameDatabase, this, this);
+    tree = new Tree(nameDatabase, this, this);
 
     QTimer::singleShot(0, this, SLOT(keepAlive()));
 }
@@ -91,6 +93,7 @@ void MessageProcessor::readData()
                 stats->input(gid, uid, cmd);
                 banlist->input(gid, uid, cmd);
                 broadcast->input(gid, uid, cmd);
+                tree->input(gid, uid, cmd);
             }
         }
     }
