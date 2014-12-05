@@ -25,8 +25,8 @@ You should create an unprivillaged user named noone and have sudo and pkill.
 
 The program makes its database in the first run but it won't work.
 After the first run exit and insert telegram group (chat) IDs you want
-the bot to manage and their admins' user ID in the tf_groups table
-(with two columns gid and admin_id) in tf.db sqlite database and then
+the bot to manage and their admins' user ID and group name in the tf_groups table
+(with 3 columns gid and admin_id and name) in tf.db sqlite database and then
 rerun the bot.
 
 You need "graphviz" for the tree module!
