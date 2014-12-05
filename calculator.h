@@ -23,7 +23,7 @@ private:
 
 public:
     explicit Calculator(MessageProcessor *msgProc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &msg);
+    void input(const QString &gid, const QString &uid, const QString &msg, bool inpm);
 
 public slots:
     void checkEndTime();

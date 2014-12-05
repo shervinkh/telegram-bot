@@ -44,7 +44,7 @@ void BanList::delBan(qint64 gid, qint64 uid)
     banned[gid].remove(uid);
 }
 
-void BanList::input(const QString &gid, const QString &uid, const QString &str)
+void BanList::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
@@ -97,6 +97,7 @@ void BanList::input(const QString &gid, const QString &uid, const QString &str)
             }
         }
 
-        messageProcessor->sendCommand("msg " + gid.toUtf8() + " \"" + message.toUtf8() + '"');
+        messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
+                                      message.replace('"', "\\\"").toUtf8() + '"');
     }
 }

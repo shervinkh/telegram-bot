@@ -7,7 +7,7 @@ Help::Help(MessageProcessor *msgproc, QObject *parent) :
 {
 }
 
-void Help::input(const QString &gid, const QString &uid, const QString &msg)
+void Help::input(const QString &gid, const QString &uid, const QString &msg, bool inpm)
 {
     if (msg.startsWith("!help"))
     {
@@ -15,7 +15,7 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
 
         int idx = msg.indexOf(' ');
         QString cmd = msg.mid(idx + 1).remove(' ').trimmed();
-        QString identity = gid.isNull() ? uid : gid;
+        QString identity = inpm ? uid : gid;
 
         if (cmd == "calc")
             message = QString("This module evaluates a mathematical expression.\\n"
@@ -57,12 +57,12 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
                               "e.g. !poll add_option poll_id option\\n"
                               "e.g. !poll delete_option poll_id option_number\\n"
                               "e.g. !poll terminate poll_id (Deletes a poll)\\n"
-                              "e.g. !poll list\\n"
+                              "e.g. !poll list (pm)\\n"
                               "e.g. !poll vote poll_id option_number\\n"
                               "e.g. !poll unvote poll_id (option_number) (option_number only in Multi-Choice polls)\\n"
-                              "e.g. !poll show poll_id\\n"
-                              "e.g. !poll result poll_id\\n"
-                              "e.g. !poll who poll_id option_number (People voted on an option)");
+                              "e.g. !poll show poll_id (pm)\\n"
+                              "e.g. !poll result poll_id (pm)\\n"
+                              "e.g. !poll who poll_id option_number (pm) (People voted on an option)");
         else if (cmd == "broadcast")
             message = QString("This module can broadcast one important message to all group members.\\n"
                               "Note: Usable only by group's admin\\n"
@@ -70,9 +70,21 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg)
         else if (cmd == "tree")
             message = QString("This module shows a graph of group members.\\n"
                               "e.g. !tree");
+        else if (cmd == "subscribe")
+            message = QString("This module lets members subscribe to be notified when there's changes like "
+                              "a new 'sup entry or a new poll.\\n"
+                              "e.g. !subscribe subscribe\\n"
+                              "e.g. !subscribe unsubscribe\\n"
+                              "e.g. !subscribe");
+        else if (cmd == "group")
+            message = QString("This module lets members use group-only commands in pm.\\n"
+                              "e.g. !group set 11558884\\n"
+                              "e.g. !group unset\\n"
+                              "e.g. !group (Lists those of your groups that bot manages)");
         else
             message = QString("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\\n"
-                              "Current modules are: calc stat help sup banlist poll broadcast tree\\n"
+                              "Current modules are: calc stat help sup banlist poll broadcast tree "
+                              "subscribe group\\n"
                               "Enter \"!help the_module\" (e.g. !help calc) for more help.");
 
         messageProcessor->sendCommand("msg " + identity.toUtf8() + " \"" + message.replace('"', "\\\"").toUtf8() + '"');

@@ -8,6 +8,7 @@
 class MessageProcessor;
 class Database;
 class NameDatabase;
+class Subscribe;
 
 class SupEntry
 {
@@ -28,10 +29,14 @@ class Sup : public QObject
     Q_OBJECT
 private:
     static const int MaxSupPerGroup;
+    static const int DistanceBetweenSup;
 
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Subscribe *subscribe;
+
+    QMap<qint64, qint64> lastSup;
 
     typedef QList<SupEntry> SupEntries;
 
@@ -41,10 +46,12 @@ private:
 
     bool addEntry(qint64 gid, const QString &str);
     void delEntry(qint64 gid, int id);
+    void freshSup();
 
 public:
-    explicit Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str);
+    explicit Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub,
+                 QObject *parent = 0);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
 
 public slots:
 

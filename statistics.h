@@ -65,8 +65,9 @@ private:
 public:
     explicit Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
     ~Statistics();
-    void input(const QString &gid, const QString &uid, const QString &str);
-    void giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit = QString());
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    void giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit = QString(),
+                  qint64 uid = -1);
     void cleanUpBefore(qint64 date);
     void saveData();
 

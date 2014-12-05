@@ -12,7 +12,7 @@ Calculator::Calculator(MessageProcessor *msgProc, QObject *parent) :
     checkEndTimer->start(timeLimit);
 }
 
-void Calculator::input(const QString &gid, const QString &uid, const QString &msg)
+void Calculator::input(const QString &gid, const QString &uid, const QString &msg, bool inpm)
 {
     if (msg.startsWith("!calc"))
     {
@@ -37,7 +37,7 @@ void Calculator::input(const QString &gid, const QString &uid, const QString &ms
 
                 endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
 
-                QString identity = gid.isNull() ? uid : gid;
+                QString identity = inpm ? uid : gid;
                 id[proc] = identity.toUtf8();
             }
         }

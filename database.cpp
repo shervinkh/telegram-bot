@@ -35,6 +35,12 @@ void Database::prepareDatabase()
     query.prepare("CREATE TABLE IF NOT EXISTS tf_banned (gid INTEGER, uid INTEGER, PRIMARY KEY (gid, uid))");
     executeQuery(query);
 
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_subscribe (gid INTEGER, uid INTEGER, PRIMARY KEY (gid, uid))");
+    executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_usergroups (uid INTEGER PRIMARY KEY, gid INTEGER)");
+    executeQuery(query);
+
     query.prepare("CREATE TABLE IF NOT EXISTS tf_sup (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                   "gid INTEGER, text TEXT)");
     executeQuery(query);

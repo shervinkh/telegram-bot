@@ -27,7 +27,9 @@ SOURCES += main.cpp \
     banlist.cpp \
     poll.cpp \
     broadcast.cpp \
-    tree.cpp
+    tree.cpp \
+    subscribe.cpp \
+    group.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -41,4 +43,6 @@ HEADERS += \
     banlist.h \
     poll.h \
     broadcast.h \
-    tree.h
+    tree.h \
+    subscribe.h \
+    group.h

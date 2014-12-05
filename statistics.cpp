@@ -82,7 +82,7 @@ void Statistics::saveData()
     QSqlDatabase::database().commit();
 }
 
-void Statistics::input(const QString &gid, const QString &uid, const QString &str)
+void Statistics::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 usernum = uid.mid(5).toLongLong();
@@ -98,12 +98,14 @@ void Statistics::input(const QString &gid, const QString &uid, const QString &st
         {
             QStringList args = str.split(' ', QString::SkipEmptyParts);
             if (args.size() >= 3)
-                giveStat(gid.mid(5).toLongLong(), args[1], args[2], args.size() > 3 ? args[3] : "");
+                giveStat(gid.mid(5).toLongLong(), args[1], args[2], args.size() > 3 ? args[3] : "",
+                         inpm ? usernum : -1);
         }
     }
 }
 
-void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit)
+void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit,
+                          qint64 uid)
 {
     qint64 dateNum = MessageProcessor::processDate(date);
 
@@ -187,8 +189,10 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
             result += QString("\\nSo far");
 
         if (!result.isNull())
-            messageProcessor->sendCommand("msg chat#" + QByteArray::number(gid) +
-                                          " \"" + result.toUtf8() + '"');
+        {
+            QByteArray sendee = (uid == -1) ? ("chat#" + QByteArray::number(gid)) : ("user#" + QByteArray::number(uid));
+            messageProcessor->sendCommand("msg " + sendee + " \"" + result.replace('"', "\\\"").toUtf8() + '"');
+        }
     }
 }
 

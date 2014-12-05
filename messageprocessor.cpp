@@ -3,8 +3,10 @@
 #include "namedatabase.h"
 #include "statistics.h"
 #include "broadcast.h"
+#include "subscribe.h"
 #include "database.h"
 #include "banlist.h"
+#include "group.h"
 #include "help.h"
 #include "poll.h"
 #include "tree.h"
@@ -32,11 +34,13 @@ MessageProcessor::MessageProcessor(QObject *parent) :
 
     database = new Database(&output, this);
     nameDatabase = new NameDatabase(database, this, this);
+    group = new Group(database, nameDatabase, this, this);
+    subscribe = new Subscribe(database, nameDatabase, this, this);
     stats = new Statistics(database, nameDatabase, this, this);
     help = new Help(this, this);
-    sup = new Sup(database, nameDatabase, this, this);
+    sup = new Sup(database, nameDatabase, this, subscribe, this);
     banlist = new BanList(database, nameDatabase, this, this);
-    poll = new Poll(database, nameDatabase, this, this);
+    poll = new Poll(database, nameDatabase, this, subscribe, this);
     broadcast = new Broadcast(nameDatabase, this, this);
     tree = new Tree(nameDatabase, this, this);
 
@@ -81,19 +85,34 @@ void MessageProcessor::readData()
                 qint64 gidnum = gid.mid(5).toLongLong();
                 qint64 uidnum = uid.mid(5).toLongLong();
 
-                calculator->input(gid, uid, cmd);
-                help->input(gid, uid, cmd);
+                group->input(gid, uid, cmd);
+
+                bool inpm = gid.isEmpty();
+
+                if (inpm)
+                {
+                    qint64 newgid = group->groupForUser(uidnum);
+                    if (newgid != -1)
+                    {
+                        gidnum = newgid;
+                        gid = "chat#" + QString::number(newgid);
+                    }
+                }
+
+                calculator->input(gid, uid, cmd, inpm);
+                help->input(gid, uid, cmd, inpm);
 
                 if (!banlist->bannedUsers()[gidnum].contains(uidnum))
                 {
-                    sup->input(gid, uid, cmd);
-                    poll->input(gid, uid, cmd);
+                    sup->input(gid, uid, cmd, inpm);
+                    poll->input(gid, uid, cmd, inpm);
+                    tree->input(gid, uid, cmd, inpm);
+                    subscribe->input(gid, uid, cmd, inpm);
                 }
 
-                stats->input(gid, uid, cmd);
-                banlist->input(gid, uid, cmd);
-                broadcast->input(gid, uid, cmd);
-                tree->input(gid, uid, cmd);
+                stats->input(gid, uid, cmd, inpm);
+                banlist->input(gid, uid, cmd, inpm);
+                broadcast->input(gid, uid, cmd, inpm);
             }
         }
     }

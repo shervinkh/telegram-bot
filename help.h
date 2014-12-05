@@ -13,7 +13,7 @@ private:
 
 public:
     explicit Help(MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &msg);
+    void input(const QString &gid, const QString &uid, const QString &msg, bool inpm);
 };
 
 #endif // HELP_H

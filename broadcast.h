@@ -17,7 +17,7 @@ private:
 
 public:
     explicit Broadcast(NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
 
 };
 

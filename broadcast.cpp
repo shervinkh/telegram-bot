@@ -8,7 +8,7 @@ Broadcast::Broadcast(NameDatabase *namedb, MessageProcessor *msgproc, QObject *p
 {
 }
 
-void Broadcast::input(const QString &gid, const QString &uid, const QString &str)
+void Broadcast::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
@@ -35,7 +35,7 @@ void Broadcast::input(const QString &gid, const QString &uid, const QString &str
 
                 int numMemebers = nameDatabase->userList(gidnum).size();
 
-                messageProcessor->sendCommand("msg " + gid.toUtf8() +
+                messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) +
                                               QString(" \"Sent broadcast message to %1 group member(s)!\"")
                                               .arg(numMemebers).toUtf8());
             }

@@ -10,6 +10,7 @@
 class MessageProcessor;
 class Database;
 class NameDatabase;
+class Subscribe;
 
 class PollData
 {
@@ -43,6 +44,7 @@ private:
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Subscribe *subscribe;
 
     typedef QMap<qint64, PollData> Polls;
     typedef QMap<qint64, Polls> Groups;
@@ -57,9 +59,10 @@ private:
     void terminatePoll(qint64 gid, qint64 id);
 
 public:
-    explicit Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
+    explicit Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub,
+                  QObject *parent = 0);
     ~Poll();
-    void input(const QString &gid, const QString &uid, const QString &str);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
     void saveData();
 
 public slots:

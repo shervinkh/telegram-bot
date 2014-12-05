@@ -26,7 +26,7 @@ private:
 
 public:
     explicit BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
     const QMap<qint64, Users> &bannedUsers() const {return banned;}
 
 public slots:

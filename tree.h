@@ -13,11 +13,11 @@ private:
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
 
-    qint64 lastGid;
+    QByteArray lastId;
 
 public:
     explicit Tree(NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &, const QString &str);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
 
 public slots:
     void processTree();

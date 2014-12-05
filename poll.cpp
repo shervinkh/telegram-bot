@@ -2,14 +2,15 @@
 #include "messageprocessor.h"
 #include "database.h"
 #include "namedatabase.h"
+#include "subscribe.h"
 #include <QtCore>
 #include <QSqlQuery>
 
 const int Poll::MaxPollsPerGroup = 10;
 const int Poll::MaxOptionsPerPoll = 20;
 
-Poll::Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
+Poll::Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub, QObject *parent) :
+    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc), subscribe(sub)
 {
     loadData();
 }
@@ -74,7 +75,7 @@ void Poll::saveData()
     QSqlDatabase::database().commit();
 }
 
-void Poll::input(const QString &gid, const QString &uid, const QString &str)
+void Poll::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 usernum = uid.mid(5).toLongLong();
@@ -89,6 +90,8 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
             if (args[1].toLower().startsWith("create") && args.size() > 2)
             {
                 qint64 id = -1;
+
+                QString title;
                 if (data[gidnum].size() < MaxPollsPerGroup)
                 {
                     bool multi = args[1].toLower().startsWith("create_mul");
@@ -97,14 +100,19 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
                     while (idx < str.size() && str[idx] == ' ')
                         ++idx;
 
-                    QString title = str.mid(idx).trimmed();
+                    title = str.mid(idx).trimmed();
                     id = createPoll(gidnum, title, multi);
                 }
 
                 if (id == -1)
                     message = QString("Couldn't add new poll; Maybe delete some polls first.");
                 else
+                {
                     message = QString("Added new poll with id: %1").arg(id);
+
+                    QString subscribeMessage = QString("New Poll: Poll#%1- %2").arg(id).arg(title);
+                    subscribe->postToSubscribed(gidnum, subscribeMessage);
+                }
             }
             else if (args[1].toLower().startsWith("add") && args.size() > 3)
             {
@@ -172,6 +180,8 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
             }
             else if (args[1].toLower().startsWith("list"))
             {
+                inpm = inpm || (args.size() > 2 && args[2].toLower().startsWith("pm"));
+
                 QMapIterator<qint64, PollData> dataIter(data[gidnum]);
 
                 if (dataIter.hasNext())
@@ -190,6 +200,8 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
                      && args.size() > 2)
             {
                 bool result = args[1].toLower().startsWith("res");
+
+                inpm = inpm || (args.size() > 3 && args[3].toLower().startsWith("pm"));
 
                 bool ok;
                 qint64 id = args[2].toLongLong(&ok);
@@ -314,6 +326,8 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
             }
             else if (args[1].toLower().startsWith("who") && args.size() > 3)
             {
+                inpm = inpm || (args.size() > 4 && args[4].toLower().startsWith("pm"));
+
                 bool ok1, ok2;
                 qint64 id = args[2].toLongLong(&ok1);
                 int option = args[3].toInt(&ok2);
@@ -341,7 +355,10 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str)
             }
 
             if (!message.isNull())
-                messageProcessor->sendCommand("msg " + gid.toUtf8() + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
+            {
+                QByteArray sendee = inpm ? uid.toUtf8() : gid.toUtf8();
+                messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
+            }
         }
     }
 }

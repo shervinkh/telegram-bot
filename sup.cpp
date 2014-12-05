@@ -2,15 +2,24 @@
 #include "database.h"
 #include "messageprocessor.h"
 #include "namedatabase.h"
+#include "subscribe.h"
 #include <QtCore>
 #include <QSqlQuery>
 
 const int Sup::MaxSupPerGroup = 10;
+const int Sup::DistanceBetweenSup = 30;
 
-Sup::Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
+Sup::Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub, QObject *parent) :
+    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc), subscribe(sub)
 {
     loadData();
+    freshSup();
+}
+
+void Sup::freshSup()
+{
+    foreach (qint64 gid, nameDatabase->groups().keys())
+        lastSup[gid] = DistanceBetweenSup;
 }
 
 void Sup::loadData()
@@ -32,16 +41,18 @@ void Sup::loadData()
     }
 }
 
-void Sup::input(const QString &gid, const QString &uid, const QString &str)
+void Sup::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
+
+    if (nameDatabase->groups().keys().contains(gidnum))
+        ++lastSup[gidnum];
 
     if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!sup"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
 
         QString message;
-        bool pm = false;
 
         if (args.size() > 2 && (args[1].toLower().startsWith("del") || args[1].toLower().startsWith("rem")))
         {
@@ -91,6 +102,10 @@ void Sup::input(const QString &gid, const QString &uid, const QString &str)
                 {
                     message = "Added 'sup entry!";
                     qDebug() << str.mid(idx).length() << " added";
+                    freshSup();
+
+                    QString subscribeMessage = QString("New 'Sup Entry: %1").arg(str.mid(idx));
+                    subscribe->postToSubscribed(gidnum, subscribeMessage);
                 }
                 else
                     message = "Couldn't add new 'sup entry; Maybe delete some entries first.";
@@ -98,22 +113,30 @@ void Sup::input(const QString &gid, const QString &uid, const QString &str)
         }
         else
         {
-            pm = args.size() > 1 && args[1].toLower().startsWith("pm");
+            inpm = inpm || (args.size() > 1 && args[1].toLower().startsWith("pm"));
 
             if (data[gidnum].isEmpty())
                 message = "Nothing important!";
             else
             {
-                for (int i = 0; i < data[gidnum].size(); ++i)
+                if (!inpm && lastSup[gidnum] < DistanceBetweenSup)
+                    message = "Public 'sup have been already shown recently. Please scroll up or use \"!sup pm\".";
+                else
                 {
-                    message += QString("%1- %2").arg(i + 1).arg(data[gidnum][i].text());
-                    if (i != data[gidnum].size() - 1)
-                        message += "\\n";
+                    for (int i = 0; i < data[gidnum].size(); ++i)
+                    {
+                        message += QString("%1- %2").arg(i + 1).arg(data[gidnum][i].text());
+                        if (i != data[gidnum].size() - 1)
+                            message += "\\n";
+                    }
+
+                    if (!inpm)
+                        lastSup[gidnum] = 0;
                 }
             }
         }
 
-        QByteArray sendee = pm ? uid.toUtf8() : gid.toUtf8();
+        QByteArray sendee = inpm ? uid.toUtf8() : gid.toUtf8();
         messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
     }
 }

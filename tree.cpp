@@ -4,15 +4,15 @@
 #include <QtCore>
 
 Tree::Tree(NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), nameDatabase(namedb), messageProcessor(msgproc), lastGid(-1)
+    QObject(parent), nameDatabase(namedb), messageProcessor(msgproc)
 {
 }
 
-void Tree::input(const QString &gid, const QString &, const QString &str)
+void Tree::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!tree") && lastGid == -1)
+    if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!tree") && lastId.isEmpty())
     {
         QFile file("tree.dot");
 
@@ -33,7 +33,7 @@ void Tree::input(const QString &gid, const QString &, const QString &str)
 
             TS << "}" << endl;
 
-            lastGid = gidnum;
+            lastId = inpm ? uid.toUtf8() : gid.toUtf8();
 
             QProcess *graphviz = new QProcess(this);
             connect(graphviz, SIGNAL(finished(int)), this, SLOT(processTree()));
@@ -53,8 +53,8 @@ void Tree::processTree()
     QProcess *proc = qobject_cast<QProcess *>(sender());
 
     if (proc->exitCode() == 0)
-        messageProcessor->sendCommand("send_document chat#" + QByteArray::number(lastGid) + " tree.png");
+        messageProcessor->sendCommand("send_document " + lastId + " tree.png");
 
     proc->deleteLater();
-    lastGid = -1;
+    lastId.clear();
 }
