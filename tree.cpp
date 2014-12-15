@@ -14,6 +14,9 @@ void Tree::input(const QString &gid, const QString &uid, const QString &str, boo
 
     if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!tree") && lastId.isEmpty())
     {
+        QStringList args = str.split(' ', QString::SkipEmptyParts);
+        inpm = inpm || (args.size() > 1 && args[1].toLower().startsWith("pm"));
+
         QFile file("tree.dot");
 
         if (file.open(QIODevice::WriteOnly))

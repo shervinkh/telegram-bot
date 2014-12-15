@@ -30,6 +30,7 @@ public:
     PollData(const QString &tit, bool mc, const Options &opts) : titl(tit), optns(opts), multi(mc) {}
 
     const QString &title() const {return titl;}
+    QString &title() {return titl;}
     bool multiChoice() const {return multi;}
     Options &options() {return optns;}
 };
@@ -57,6 +58,7 @@ private:
     void addOption(qint64 gid, qint64 id, const QString &opt);
     void delOption(qint64 gid, qint64 id, int idx);
     void terminatePoll(qint64 gid, qint64 id);
+    void changeTitle(qint64 gid, qint64 pid, const QString &str);
 
 public:
     explicit Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub,

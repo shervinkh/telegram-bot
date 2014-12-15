@@ -1,0 +1,9 @@
+#!/usr/bin/gnuplot
+
+set term pngcairo linewidth 2 font ",13"
+set output "stat.png"
+set title "Activity in hours of the day"
+set xlabel "Hour"
+set ylabel "#Messages"
+set xtics add 2
+plot "stat.data" using 1:2 title "Activity" with lines lt rgb 'purple'

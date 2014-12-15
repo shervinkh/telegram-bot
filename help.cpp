@@ -27,11 +27,12 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
         else if (cmd == "stat")
             message = QString("This module gathers statistical data from the groups I monitor\\n"
                               "Note: Usable only by group's admin\\n"
-                              "Usage: !stat date operation limit\\n"
+                              "e.g. !stat date operation limit\\n"
                               "e.g. !stat Today summary\\n"
                               "e.g. !stat Yesterday maxlength 1-10\\n"
                               "e.g. !stat Today maxdensity all\\n"
-                              "e.g. !stat 2014/01/01 maxcount 2");
+                              "e.g. !stat 2014/01/01 maxcount 2\\n"
+                              "e.g. !stat Today activity (Activity per hour graph)");
         else if (cmd == "sup")
             message = QString("This module can keep a bunch of important things happening on the "
                               "groups I monitor so that newcomers would get a clue of what's happening.\\n"
@@ -54,8 +55,10 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
                               "Note: Currently title and options with multiple lines aren't supported\\n"
                               "e.g. !poll create Are you OK? (Creates Single-Choice poll)\\n"
                               "e.g. !poll create_multi Where are you? (Creates Multi-Choice poll)\\n"
+                              "e.g. !poll title_change poll_id Where were you?\\n"
                               "e.g. !poll add_option poll_id option\\n"
                               "e.g. !poll delete_option poll_id option_number\\n"
+                              "e.g. !poll option_change poll_id option_number option\\n"
                               "e.g. !poll terminate poll_id (Deletes a poll)\\n"
                               "e.g. !poll list (pm)\\n"
                               "e.g. !poll vote poll_id option_number\\n"
@@ -69,7 +72,8 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
                               "e.g. !broadcast message");
         else if (cmd == "tree")
             message = QString("This module shows a graph of group members.\\n"
-                              "e.g. !tree");
+                              "e.g. !tree\\n"
+                              "e.g. !tree pm");
         else if (cmd == "subscribe")
             message = QString("This module lets members subscribe to be notified when there's changes like "
                               "a new 'sup entry or a new poll.\\n"
@@ -80,11 +84,15 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
             message = QString("This module lets members use group-only commands in pm.\\n"
                               "e.g. !group set 11558884\\n"
                               "e.g. !group unset\\n"
+                              "e.g. !group userslist 11558884 (Lists group memebers with their ids)\\n"
                               "e.g. !group (Lists those of your groups that bot manages)");
+        else if (cmd == "as")
+            message = QString("This module lets group admin to run commands as other members.\\n"
+                              "e.g. !as 40723766 !sup pm");
         else
             message = QString("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\\n"
                               "Current modules are: calc stat help sup banlist poll broadcast tree "
-                              "subscribe group\\n"
+                              "subscribe group as\\n"
                               "Enter \"!help the_module\" (e.g. !help calc) for more help.");
 
         messageProcessor->sendCommand("msg " + identity.toUtf8() + " \"" + message.replace('"', "\\\"").toUtf8() + '"');

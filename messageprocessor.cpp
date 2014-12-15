@@ -99,6 +99,9 @@ void MessageProcessor::readData()
                     }
                 }
 
+                processAs(gid, uid, cmd, inpm);
+                uidnum = uid.mid(5).toLongLong();
+
                 calculator->input(gid, uid, cmd, inpm);
                 help->input(gid, uid, cmd, inpm);
 
@@ -142,9 +145,10 @@ void MessageProcessor::keepAlive()
         foreach (qint64 gid, nameDatabase->groups().keys())
         {
             stats->giveStat(gid, "Yesterday", "summary");
-            stats->giveStat(gid, "Yesterday", "maxcount", "all");
-            stats->giveStat(gid, "Yesterday", "maxlength", "all");
-            stats->giveStat(gid, "Yesterday", "maxdensity", "all");
+            stats->giveStat(gid, "Yesterday", "maxcount", "1-10");
+            stats->giveStat(gid, "Yesterday", "maxlength", "1-10");
+            stats->giveStat(gid, "Yesterday", "maxdensity", "1-10");
+            stats->giveStat(gid, "Yesterday", "activity");
         }
         stats->cleanUpBefore(QDate::currentDate().toJulianDay() - 3);
     }
@@ -179,4 +183,36 @@ QString MessageProcessor::convertToName(qint64 id)
     }
 
     return name;
+}
+
+void MessageProcessor::processAs(const QString &gid, QString &uid, QString &str, bool inpm)
+{
+    qint64 gidnum = gid.mid(5).toLongLong();
+    qint64 uidnum = uid.mid(5).toLongLong();
+
+    QByteArray respondTo = inpm ? uid.toUtf8() : gid.toUtf8();
+
+    if (nameDatabase->groups().keys().contains(gidnum) && nameDatabase->groups()[gidnum].first == uidnum
+        && str.startsWith("!as"))
+    {
+        QStringList args = str.split(' ', QString::SkipEmptyParts);
+
+        if (args.size() > 2)
+        {
+            bool ok;
+            qint64 targetuid = args[1].toLongLong(&ok);
+
+            if (ok && nameDatabase->userList(gidnum).keys().contains(targetuid))
+            {
+                int idx = str.indexOf(' ', str.indexOf(args[1]));
+                while (idx < str.size() && str[idx] == ' ')
+                    ++idx;
+
+                str = str.mid(idx).trimmed();
+                uid = "user#" + QString::number(targetuid);
+
+                sendCommand("msg " + respondTo + " \"As command executed successfully!\"");
+            }
+        }
+    }
 }

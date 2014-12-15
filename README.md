@@ -30,3 +30,4 @@ the bot to manage and their admins' user ID and group name in the tf_groups tabl
 rerun the bot.
 
 You need "graphviz" for the tree module!
+You need "gnuplot" for the activity part in the statistics module!

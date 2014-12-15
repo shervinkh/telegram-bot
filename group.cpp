@@ -51,6 +51,31 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
             unsetGroup(uidnum);
             message = "Your group has been unset.";
         }
+        else if (args.size() > 2 && args[1].toLower().startsWith("users"))
+        {
+            bool ok;
+            qint64 id = args[2].toLongLong(&ok);
+
+            if (ok && nameDatabase->groups().keys().contains(id) &&
+                      nameDatabase->userList(id).contains(uidnum))
+            {
+                qint64 adminid = nameDatabase->groups()[id].first;
+
+                int idx = 1;
+                int size = nameDatabase->userList(id).size();
+
+                foreach (qint64 curuid, nameDatabase->userList(id).keys())
+                {
+                    message += QString("%1- %2 (%3)%4").arg(idx).arg(curuid)
+                                                       .arg(messageProcessor->convertToName(curuid))
+                                                       .arg((curuid == adminid) ? " (Admin)" : "");
+                    if (idx != size)
+                        message += "\\n";
+
+                    ++idx;
+                }
+            }
+        }
         else
         {
             QList<qint64> gids;

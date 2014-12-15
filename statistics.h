@@ -36,9 +36,15 @@ private:
 
     typedef QPair<UserStatsData, qint64> DataPair;
 
+    typedef QPair<qint64, QByteArray> DateAndSendee;
+    typedef QPair<qint64, DateAndSendee> QueueData;
+
+    static const int GraphDelay;
+
     Dates data;
 
     QList<DataPair> tempList;
+    QList<QueueData> activityQueue;
 
     Database *database;
     NameDatabase *nameDatabase;
@@ -72,7 +78,8 @@ public:
     void saveData();
 
 public slots:
-
+    void processGraph();
+    void processActivityQueue();
 };
 
 #endif // STATISTICS_H

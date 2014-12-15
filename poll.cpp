@@ -114,6 +114,21 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str, boo
                     subscribe->postToSubscribed(gidnum, subscribeMessage);
                 }
             }
+            else if (args[1].toLower().startsWith("title") && args.size() > 3)
+            {
+                bool ok;
+                qint64 id = args[2].toLongLong(&ok);
+
+                if (ok && data[gidnum].contains(id))
+                {
+                    int idx = str.indexOf(' ', str.indexOf(args[2]));
+                    while (idx < str.size() && str[idx] == ' ')
+                        ++idx;
+
+                    changeTitle(gidnum, id, str.mid(idx).trimmed());
+                    message = QString("Poll#%1 title successfully changed.").arg(id);
+                }
+            }
             else if (args[1].toLower().startsWith("add") && args.size() > 3)
             {
                 bool ok;
@@ -165,6 +180,25 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str, boo
                         delOption(gidnum, id, start);
                     message = QString("Deleted option %1 From poll#%2.")
                               .arg(args[3]).arg(id);
+                }
+            }
+            else if (args[1].toLower().startsWith("option") && args.size() > 4)
+            {
+                bool ok1, ok2;
+                qint64 id = args[2].toLongLong(&ok1);
+                int optid = args[3].toInt(&ok2);
+
+                if (ok1 && ok2 && data[gidnum].contains(id) && optid <= data[gidnum][id].options().size())
+                {
+                    int idx = str.indexOf(' ', str.indexOf(args[2]));
+                    ++idx;
+                    while (idx < str.size() && str[idx] != ' ')
+                        ++idx;
+                    while (idx < str.size() && str[idx] == ' ')
+                        ++idx;
+
+                    data[gidnum][id].options()[optid - 1].first = str.mid(idx).trimmed();
+                    message = QString("Successfully changed option %1 of Poll#%2.").arg(optid).arg(id);
                 }
             }
             else if (args[1].toLower().startsWith("term") && args.size() > 2)
@@ -400,4 +434,14 @@ void Poll::terminatePoll(qint64 gid, qint64 id)
     query.bindValue(":id", id);
     database->executeQuery(query);
     data[gid].remove(id);
+}
+
+void Poll::changeTitle(qint64 gid, qint64 pid, const QString &str)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE tf_polls SET title=:title WHERE id=:id");
+    query.bindValue(":title", str);
+    query.bindValue(":id", pid);
+    database->executeQuery(query);
+    data[gid][pid].title() = str;
 }

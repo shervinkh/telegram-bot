@@ -6,6 +6,8 @@
 #include <QVariant>
 #include <QtCore>
 
+const int Statistics::GraphDelay = 3000;
+
 Statistics::Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
     QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
 {
@@ -89,10 +91,14 @@ void Statistics::input(const QString &gid, const QString &uid, const QString &st
 
     if (nameDatabase->groups().keys().contains(gidnum))
     {
-        ++data[QDate::currentDate().toJulianDay()][gidnum][usernum].count();
-        data[QDate::currentDate().toJulianDay()][gidnum][usernum].length() += str.length();
-        ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
-        data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
+        if (!inpm)
+        {
+            ++data[QDate::currentDate().toJulianDay()][gidnum][usernum].count();
+            data[QDate::currentDate().toJulianDay()][gidnum][usernum].length() += str.length();
+            ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
+            data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
+            ++data[QDate::currentDate().toJulianDay()][gidnum][-1 - QTime::currentTime().hour()].count();
+        }
 
         if (str.startsWith("!stat") && usernum == nameDatabase->groups()[gidnum].first)
         {
@@ -108,6 +114,7 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                           qint64 uid)
 {
     qint64 dateNum = MessageProcessor::processDate(date);
+    QByteArray sendee = (uid == -1) ? ("chat#" + QByteArray::number(gid)) : ("user#" + QByteArray::number(uid));
 
     if (dateNum > 0 && data.contains(dateNum) && data[dateNum].contains(gid))
     {
@@ -155,7 +162,7 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                 {
                     usersIter.next();
 
-                    if (usersIter.key() != 0)
+                    if (usersIter.key() > 0)
                         tempList.append(DataPair(usersIter.value(), usersIter.key()));
                 }
 
@@ -184,15 +191,19 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                 }
             }
         }
+        else if (factor.toLower().startsWith("act"))
+        {
+            activityQueue.push_back(QueueData(gid, DateAndSendee(dateNum, sendee)));
+
+            if (activityQueue.size() == 1)
+                QTimer::singleShot(GraphDelay, this, SLOT(processActivityQueue()));
+        }
 
         if (!result.isNull() && dateNum == QDate::currentDate().toJulianDay())
             result += QString("\\nSo far");
 
         if (!result.isNull())
-        {
-            QByteArray sendee = (uid == -1) ? ("chat#" + QByteArray::number(gid)) : ("user#" + QByteArray::number(uid));
             messageProcessor->sendCommand("msg " + sendee + " \"" + result.replace('"', "\\\"").toUtf8() + '"');
-        }
     }
 }
 
@@ -206,4 +217,48 @@ void Statistics::cleanUpBefore(qint64 date)
     query.prepare("DELETE FROM tf_userstat WHERE date < :date");
     query.bindValue(":date", date);
     database->executeQuery(query);
+}
+
+void Statistics::processGraph()
+{
+    QProcess *proc = qobject_cast<QProcess *>(sender());
+
+    if (proc->exitCode() == 0)
+        messageProcessor->sendCommand("send_photo " + activityQueue.front().second.second + " stat.png");
+
+    proc->deleteLater();
+    activityQueue.pop_front();
+
+    if (!activityQueue.isEmpty())
+        QTimer::singleShot(GraphDelay, this, SLOT(processActivityQueue()));
+}
+
+void Statistics::processActivityQueue()
+{
+    if (activityQueue.isEmpty())
+        return;
+
+    qint64 gid = activityQueue.front().first;
+    qint64 dateNum = activityQueue.front().second.first;
+
+    QFile file("stat.data");
+
+    if (file.open(QIODevice::WriteOnly))
+    {
+        QTextStream TS(&file);
+        TS.setCodec(QTextCodec::codecForName("UTF-8"));
+
+        for (int i = 0; i < 24; ++i)
+            TS << i << '\t' << data[dateNum][gid][-1 - i].count() << endl;
+
+        QProcess *gnuplot = new QProcess(this);
+        connect(gnuplot, SIGNAL(finished(int)), this, SLOT(processGraph()));
+
+        QStringList args;
+        args << "plot_script";
+
+        gnuplot->start("gnuplot", args);
+    }
+    else
+        activityQueue.pop_front();
 }

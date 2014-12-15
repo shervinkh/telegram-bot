@@ -47,6 +47,8 @@ private:
     qint64 endDayCron;
     qint64 hourlyCron;
 
+    void processAs(const QString &gid, QString &uid, QString &str, bool inpm);
+
 public:
     explicit MessageProcessor(QObject *parent = 0);
     ~MessageProcessor();
