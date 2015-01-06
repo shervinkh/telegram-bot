@@ -157,29 +157,16 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str, boo
                 bool ok;
                 qint64 id = args[2].toLongLong(&ok);
 
-                int start, end;
-                int idx = args[3].indexOf('-');
-                bool ok1, ok2;
+                bool ok1;
+                int idx = args[3].toInt(&ok1);
 
-                if (idx == -1)
+                if (ok && ok1 && data[gidnum].contains(id) && 0 < idx && idx <= data[gidnum][id].options().size() &&
+                    (data[gidnum][id].options()[idx - 1].second.isEmpty() || usernum == nameDatabase->groups()[gidnum].first
+                     || usernum == messageProcessor->headAdminId()))
                 {
-                    start = end = args[3].toInt(&ok1);
-                    ok2 = true;
-                }
-                else
-                {
-                    start = args[3].mid(0, idx).toInt(&ok1);
-                    end = args[3].mid(idx + 1).toInt(&ok2);
-                }
-
-
-                if (ok && ok1 && ok2 && data[gidnum].contains(id) && 0 < start && end >= start
-                    && end <= data[gidnum][id].options().size())
-                {
-                    for (int i = start; i <= end; ++i)
-                        delOption(gidnum, id, start);
+                    delOption(gidnum, id, idx);
                     message = QString("Deleted option %1 From poll#%2.")
-                              .arg(args[3]).arg(id);
+                              .arg(idx).arg(id);
                 }
             }
             else if (args[1].toLower().startsWith("option") && args.size() > 4)
@@ -201,7 +188,8 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str, boo
                     message = QString("Successfully changed option %1 of Poll#%2.").arg(optid).arg(id);
                 }
             }
-            else if (args[1].toLower().startsWith("term") && args.size() > 2)
+            else if (args[1].toLower().startsWith("term") && args.size() > 2
+                     && (usernum == nameDatabase->groups()[gidnum].first || usernum == messageProcessor->headAdminId()))
             {
                 bool ok;
                 qint64 id = args[2].toLongLong(&ok);
@@ -211,24 +199,6 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str, boo
                     terminatePoll(gidnum, id);
                     message = QString("Poll#%1 terminated.").arg(id);
                 }
-            }
-            else if (args[1].toLower().startsWith("list"))
-            {
-                inpm = inpm || (args.size() > 2 && args[2].toLower().startsWith("pm"));
-
-                QMapIterator<qint64, PollData> dataIter(data[gidnum]);
-
-                if (dataIter.hasNext())
-                    while (dataIter.hasNext())
-                    {
-                        dataIter.next();
-                        message += QString("Poll#%1- %2%3").arg(dataIter.key()).arg(dataIter.value().title())
-                                   .arg(dataIter.value().multiChoice() ? " (Multi-Choice)" : "");
-                        if (dataIter.hasNext())
-                            message += "\\n";
-                    }
-                else
-                    message = QString("No Poll!");
             }
             else if ((args[1].toLower().startsWith("show") || args[1].toLower().startsWith("res"))
                      && args.size() > 2)
@@ -387,8 +357,26 @@ void Poll::input(const QString &gid, const QString &uid, const QString &str, boo
                     }
                 }
             }
+            else
+            {
+                inpm = inpm || (args.size() > 1 && args[1].toLower().startsWith("pm"));
 
-            if (!message.isNull())
+                QMapIterator<qint64, PollData> dataIter(data[gidnum]);
+
+                if (dataIter.hasNext())
+                    while (dataIter.hasNext())
+                    {
+                        dataIter.next();
+                        message += QString("Poll#%1- %2%3").arg(dataIter.key()).arg(dataIter.value().title())
+                                   .arg(dataIter.value().multiChoice() ? " (Multi-Choice)" : "");
+                        if (dataIter.hasNext())
+                            message += "\\n";
+                    }
+                else
+                    message = QString("No Poll!");
+            }
+
+            if (!message.isEmpty())
             {
                 QByteArray sendee = inpm ? uid.toUtf8() : gid.toUtf8();
                 messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toUtf8() + '"');

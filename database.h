@@ -20,6 +20,7 @@ private:
 public:
     explicit Database(QTextStream *out, QObject *parent = 0);
     void executeQuery(QSqlQuery &query);
+    void deleteGroup(qint64 gid);
 };
 
 #endif // DATABASE_H

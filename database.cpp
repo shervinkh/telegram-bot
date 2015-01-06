@@ -48,4 +48,44 @@ void Database::prepareDatabase()
     query.prepare("CREATE TABLE IF NOT EXISTS tf_polls (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                   "gid INTEGER, title TEXT, multi_choice BOOLEAN, options TEXT)");
     executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_protect (gid INTEGER, "
+                  "type INTEGER, value TEXT, PRIMARY KEY (gid, type))");
+    executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_config (headadmin_id INTEGER, bot_id INTEGER)");
+    executeQuery(query);
+}
+
+void Database::deleteGroup(qint64 gid)
+{
+    QSqlQuery query;
+
+    query.prepare("DELETE FROM tf_banned WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_userstat WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_subscribe WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_usergroups WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_sup WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_polls WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_protect WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
 }

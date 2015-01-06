@@ -24,10 +24,9 @@ You should create an unprivillaged user named noone and have sudo and pkill.
 (Because this program uses them to run calc commands in a controlled environment)
 
 The program makes its database in the first run but it won't work.
-After the first run exit and insert telegram group (chat) IDs you want
-the bot to manage and their admins' user ID and group name in the tf_groups table
-(with 3 columns gid and admin_id and name) in tf.db sqlite database and then
-rerun the bot.
+After the first run exit and insert headadmin id and bot id in tf_config
+table (with two columns headadmin_id and bot_id) in tf.db sqlite database
+and then rerun the bot.
 
 You need "graphviz" for the tree module!
 You need "gnuplot" for the activity part in the statistics module!

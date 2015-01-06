@@ -29,7 +29,9 @@ SOURCES += main.cpp \
     broadcast.cpp \
     tree.cpp \
     subscribe.cpp \
-    group.cpp
+    group.cpp \
+    protect.cpp \
+    headadmin.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -45,4 +47,6 @@ HEADERS += \
     broadcast.h \
     tree.h \
     subscribe.h \
-    group.h
+    group.h \
+    protect.h \
+    headadmin.h

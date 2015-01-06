@@ -27,10 +27,13 @@ private:
     qint64 lastGidSeen;
     qint64 lastUidSeen;
 
+    bool gettingList;
+
     void getNames(qint64 gid);
 
 public:
     explicit NameDatabase(Database *db, MessageProcessor *mp, QObject *parent = 0);
+    void loadData();
     void input(const QString &str);
     void refreshDatabase();
     const QMap<qint64, GroupData> &groups() const {return monitoringGroups;}

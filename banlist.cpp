@@ -49,7 +49,8 @@ void BanList::input(const QString &gid, const QString &uid, const QString &str, 
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().keys().contains(gidnum) && nameDatabase->groups()[gidnum].first == uidnum
+    if (nameDatabase->groups().keys().contains(gidnum)
+        && (nameDatabase->groups()[gidnum].first == uidnum || uidnum == messageProcessor->headAdminId())
         && str.startsWith("!banlist"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
@@ -97,7 +98,8 @@ void BanList::input(const QString &gid, const QString &uid, const QString &str, 
             }
         }
 
-        messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                      message.replace('"', "\\\"").toUtf8() + '"');
+        if (!message.isEmpty())
+            messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
+                                          message.replace('"', "\\\"").toUtf8() + '"');
     }
 }

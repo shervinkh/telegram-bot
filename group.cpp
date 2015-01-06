@@ -66,9 +66,17 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
 
                 foreach (qint64 curuid, nameDatabase->userList(id).keys())
                 {
+                    QString title;
+                    if (curuid == messageProcessor->botId())
+                        title = " (The Bot)";
+                    if (curuid == adminid)
+                        title = " (Group's Bot Admin)";
+                    if (curuid == messageProcessor->headAdminId())
+                        title = " (Bot's Head Admin)";
+
                     message += QString("%1- %2 (%3)%4").arg(idx).arg(curuid)
                                                        .arg(messageProcessor->convertToName(curuid))
-                                                       .arg((curuid == adminid) ? " (Admin)" : "");
+                                                       .arg(title);
                     if (idx != size)
                         message += "\\n";
 
@@ -106,8 +114,9 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
             }
         }
 
-        messageProcessor->sendCommand("msg " + (gid.isEmpty() ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                      message.toUtf8() + '"');
+        if (!message.isEmpty())
+            messageProcessor->sendCommand("msg " + (gid.isEmpty() ? uid.toUtf8() : gid.toUtf8()) + " \"" +
+                                          message.toUtf8() + '"');
     }
 }
 

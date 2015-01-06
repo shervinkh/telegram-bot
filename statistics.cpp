@@ -100,7 +100,8 @@ void Statistics::input(const QString &gid, const QString &uid, const QString &st
             ++data[QDate::currentDate().toJulianDay()][gidnum][-1 - QTime::currentTime().hour()].count();
         }
 
-        if (str.startsWith("!stat") && usernum == nameDatabase->groups()[gidnum].first)
+        if (str.startsWith("!stat")
+            && (usernum == nameDatabase->groups()[gidnum].first || usernum == messageProcessor->headAdminId()))
         {
             QStringList args = str.split(' ', QString::SkipEmptyParts);
             if (args.size() >= 3)
@@ -199,10 +200,10 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                 QTimer::singleShot(GraphDelay, this, SLOT(processActivityQueue()));
         }
 
-        if (!result.isNull() && dateNum == QDate::currentDate().toJulianDay())
+        if (!result.isEmpty() && dateNum == QDate::currentDate().toJulianDay())
             result += QString("\\nSo far");
 
-        if (!result.isNull())
+        if (!result.isEmpty())
             messageProcessor->sendCommand("msg " + sendee + " \"" + result.replace('"', "\\\"").toUtf8() + '"');
     }
 }

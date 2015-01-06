@@ -131,13 +131,18 @@ void Sup::input(const QString &gid, const QString &uid, const QString &str, bool
                     }
 
                     if (!inpm)
+                    {
                         lastSup[gidnum] = 0;
+                        message += "\\n\\n:|";
+                    }
                 }
             }
         }
 
         QByteArray sendee = inpm ? uid.toUtf8() : gid.toUtf8();
-        messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
+
+        if (!message.isEmpty())
+            messageProcessor->sendCommand("msg " + sendee + " \"" + message.replace('"', "\\\"").toUtf8() + '"');
     }
 }
 

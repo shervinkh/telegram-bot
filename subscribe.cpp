@@ -93,8 +93,9 @@ void Subscribe::input(const QString &gid, const QString &uid, const QString &str
             }
         }
 
-        messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                      message.replace('"', "\\\"").toUtf8() + '"');
+        if (!message.isEmpty())
+            messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
+                                          message.replace('"', "\\\"").toUtf8() + '"');
     }
 }
 
