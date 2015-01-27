@@ -25,7 +25,7 @@ private:
 
 public:
     explicit Protect(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void rawInput(const QString &str);
 
 public slots:

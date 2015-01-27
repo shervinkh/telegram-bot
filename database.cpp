@@ -2,8 +2,8 @@
 #include <QtCore>
 #include <QtSql>
 
-Database::Database(QTextStream *out, QObject *parent) :
-    QObject(parent), output(out)
+Database::Database(QObject *parent) :
+    QObject(parent)
 {
     database = QSqlDatabase::addDatabase("QSQLITE");
     database.setDatabaseName("tf.db");
@@ -17,7 +17,7 @@ Database::Database(QTextStream *out, QObject *parent) :
 void Database::executeQuery(QSqlQuery &query)
 {
     if (!query.exec())
-        (*output) << "Sql Error: " << query.executedQuery() << endl
+        qDebug() << "Sql Error: " << query.executedQuery() << endl
                   << query.lastError().text() << endl << flush;
 }
 
@@ -55,6 +55,14 @@ void Database::prepareDatabase()
 
     query.prepare("CREATE TABLE IF NOT EXISTS tf_config (headadmin_id INTEGER, bot_id INTEGER)");
     executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_permissions (gid INTEGER, module TEXT, operation TEXT, "
+                  "access INTEGER, pm_access INTEGER, PRIMARY KEY (gid, module, operation))");
+    executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                  "gid INTEGER, uid INTEGER, inpm BOOLEAN, command TEXT)");
+    executeQuery(query);
 }
 
 void Database::deleteGroup(qint64 gid)
@@ -86,6 +94,14 @@ void Database::deleteGroup(qint64 gid)
     executeQuery(query);
 
     query.prepare("DELETE FROM tf_protect WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_permissions WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_requests WHERE gid=:gid");
     query.bindValue(":gid", gid);
     executeQuery(query);
 }

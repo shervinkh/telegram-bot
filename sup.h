@@ -9,6 +9,7 @@ class MessageProcessor;
 class Database;
 class NameDatabase;
 class Subscribe;
+class Permission;
 
 class SupEntry
 {
@@ -21,7 +22,7 @@ public:
     SupEntry(qint64 _id, const QString &str) : id(_id), txt(str) {}
 
     qint64 Id() const {return id;}
-    QString text() const {return txt;}
+    QString &text() {return txt;}
 };
 
 class Sup : public QObject
@@ -34,6 +35,7 @@ private:
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Permission *permission;
     Subscribe *subscribe;
 
     QMap<qint64, qint64> lastSup;
@@ -46,12 +48,13 @@ private:
 
     bool addEntry(qint64 gid, const QString &str);
     void delEntry(qint64 gid, int id);
+    void editEntry(qint64 gid, int id, const QString &str);
     void freshSup();
 
 public:
-    explicit Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub,
-                 QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    explicit Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
+                 Subscribe *sub, QObject *parent = 0);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
 
 public slots:
 

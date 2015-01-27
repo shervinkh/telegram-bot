@@ -2,12 +2,14 @@
 #include "calculator.h"
 #include "namedatabase.h"
 #include "statistics.h"
+#include "permission.h"
 #include "broadcast.h"
 #include "subscribe.h"
 #include "headadmin.h"
 #include "database.h"
 #include "banlist.h"
 #include "protect.h"
+#include "request.h"
 #include "group.h"
 #include "help.h"
 #include "poll.h"
@@ -16,41 +18,42 @@
 #include <QtCore>
 #include <QSqlQuery>
 
+const int MessageProcessor::MessageLimit = 4000;
 const qint64 MessageProcessor::keepAliveInterval = 60000;
 
 MessageProcessor::MessageProcessor(QObject *parent) :
-    QObject(parent), output(stdout), endDayCron(-1), headaid(-1), bid(-1), shouldRun(true)
+    QObject(parent), endDayCron(-1), headaid(-1), bid(-1), shouldRun(true), cmdContinue(false)
 {
     proc = new QProcess(this);
-    proc->setReadChannel(QProcess::StandardOutput);
-    QStringList args;
-    args << "-C" << "-R" << "-I";
-
     hourlyCron = QTime::currentTime().hour();
 
     connect(proc, SIGNAL(readyRead()), this, SLOT(readData()));
-    connect(proc, SIGNAL(finished(int)), this, SLOT(rerunTelegram()));
-    proc->start(QCoreApplication::arguments()[1], args, QProcess::ReadWrite);
+    connect(proc, SIGNAL(finished(int)), this, SLOT(runTelegram()));
+    runTelegram();
 
     keepAliveTimer = new QTimer(this);
     connect(keepAliveTimer, SIGNAL(timeout()), this, SLOT(keepAlive()));
     keepAliveTimer->start(keepAliveInterval);
 
-    calculator = new Calculator(this, this);
-
-    database = new Database(&output, this);
+    database = new Database(this);
     nameDatabase = new NameDatabase(database, this, this);
+    request = new Request(database, nameDatabase, this, this);
+    permission = new Permission(database, nameDatabase, this, request, this);
+
+    calculator = new Calculator(nameDatabase, this, permission, this);
     group = new Group(database, nameDatabase, this, this);
-    subscribe = new Subscribe(database, nameDatabase, this, this);
-    stats = new Statistics(database, nameDatabase, this, this);
-    help = new Help(this, this);
-    sup = new Sup(database, nameDatabase, this, subscribe, this);
-    banlist = new BanList(database, nameDatabase, this, this);
-    poll = new Poll(database, nameDatabase, this, subscribe, this);
-    broadcast = new Broadcast(nameDatabase, this, this);
-    tree = new Tree(nameDatabase, this, this);
+    subscribe = new Subscribe(database, nameDatabase, this, permission, this);
+    stats = new Statistics(database, nameDatabase, this, permission, this);
+    help = new Help(nameDatabase, this, permission, this);
+    sup = new Sup(database, nameDatabase, this, permission, subscribe, this);
+    banlist = new BanList(database, nameDatabase, this, permission, this);
+    poll = new Poll(database, nameDatabase, this, permission, subscribe, this);
+    broadcast = new Broadcast(nameDatabase, this, permission, this);
+    tree = new Tree(nameDatabase, this, permission, this);
     protect = new Protect(database, nameDatabase, this, this);
     headAdmin = new HeadAdmin(database, nameDatabase, this, this);
+
+    request->setSubscribe(subscribe);
 
     loadConfig();
 
@@ -84,13 +87,22 @@ void MessageProcessor::readData()
         nameDatabase->input(str);
         protect->rawInput(str);
 
-        if (str.startsWith('['))
+        if (cmdContinue)
+            cmd += str;
+        else
         {
+            cmd.clear();
+            gid.clear();
+            uid.clear();
+
             int idx = qMax(str.indexOf("»»»"), str.indexOf(">>>")) + 3;
 
             if (idx > 2)
             {
-                QString cmd = str.mid(idx).trimmed();
+                cmd = str.mid(idx + 1);
+
+                if (cmd.startsWith("[fwd from "))
+                    cmd = cmd.mid(cmd.indexOf(']') + 2);
 
                 int chatidx = str.indexOf("chat#");
                 int useridx = str.indexOf("user#");
@@ -98,72 +110,100 @@ void MessageProcessor::readData()
                 if (useridx == -1)
                     continue;
 
-                QString gid, uid;
                 if (chatidx != -1 && chatidx < useridx)
-                    gid = str.mid(chatidx, str.indexOf(' ', chatidx) - chatidx);
-                uid = str.mid(useridx, str.indexOf(' ', useridx) - useridx);
+                    gid = str.mid(chatidx, str.indexOf('\e', chatidx) - chatidx);
+                uid = str.mid(useridx, str.indexOf('\e', useridx) - useridx);
+            }
+        }
 
+        if (!cmd.isEmpty())
+        {
+            int endidx = cmd.indexOf('\e');
+            if (endidx == -1)
+                cmdContinue = true;
+            else
+            {
+                cmd = cmd.mid(0, endidx);
+                cmdContinue = false;
+            }
+
+            if (!cmdContinue)
+            {
                 QString identity = gid.isNull() ? uid : gid;
+                qDebug() << "Got From " << identity << ':' << cmd;
 
-                output << "Got From " << identity << ": " << cmd << ' ' << endl << flush;
-
-                qint64 gidnum = gid.mid(5).toLongLong();
                 qint64 uidnum = uid.mid(5).toLongLong();
-
-                group->input(gid, uid, cmd);
+                qint64 gidnum = gid.mid(5).toLongLong();
 
                 bool inpm = gid.isEmpty();
+                if (!inpm)
+                    stats->input1(gid, uid, cmd);
 
+                group->input(gid, uid, cmd);
                 if (inpm)
                 {
                     qint64 newgid = group->groupForUser(uidnum);
+
                     if (newgid != -1)
                     {
                         gidnum = newgid;
                         gid = "chat#" + QString::number(newgid);
                     }
+                    else
+                        sendCommand("msg " + uid.toUtf8() + " \"Note: In order to use group-related "
+                                    "functions in PM, use \\\"!group set group_id\\\" first. "
+                                    "You can see your groups' id via \\\"!group\\\".\"");
                 }
 
-                processAs(gid, uid, cmd, inpm);
-                uidnum = uid.mid(5).toLongLong();
+                bool isAdmin = (uidnum == headaid);
+                if (nameDatabase->groups().contains(gidnum))
+                    isAdmin = isAdmin || (uidnum == nameDatabase->groups()[gidnum].first);
 
-                if (!banlist->bannedUsers()[gidnum].contains(uidnum) || inpm)
-                {
-                    help->input(gid, uid, cmd, inpm);
-                }
+                processAs(gid, uid, cmd, inpm, isAdmin);
 
-                if (inpm)
-                {
-                    calculator->input(gid, uid, cmd, inpm);
-                }
-
-                if (!banlist->bannedUsers()[gidnum].contains(uidnum))
-                {
-                    sup->input(gid, uid, cmd, inpm);
-                    poll->input(gid, uid, cmd, inpm);
-                    tree->input(gid, uid, cmd, inpm);
-                    subscribe->input(gid, uid, cmd, inpm);
-                }
-
-                stats->input(gid, uid, cmd, inpm);
-                protect->input(gid, uid, cmd, inpm);
-                banlist->input(gid, uid, cmd, inpm);
-                broadcast->input(gid, uid, cmd, inpm);
-                headAdmin->input(gid, uid, cmd, inpm);
+                processCommand(gid, uid, cmd, inpm, isAdmin);
             }
         }
     }
 }
 
+void MessageProcessor::processCommand(const QString &gid, QString uid, QString cmd, bool inpm, bool isAdmin)
+{
+    qint64 gidnum = gid.mid(5).toLongLong();
+    qint64 uidnum = uid.mid(5).toLongLong();
+
+    if (!banlist->bannedUsers()[gidnum].contains(uidnum) || inpm)
+    {
+        help->input(gid, uid, cmd, inpm, isAdmin);
+        calculator->input(gid, uid, cmd, inpm, isAdmin);
+    }
+
+    if (!banlist->bannedUsers()[gidnum].contains(uidnum))
+    {
+        sup->input(gid, uid, cmd, inpm, isAdmin);
+        poll->input(gid, uid, cmd, inpm, isAdmin);
+        tree->input(gid, uid, cmd, inpm, isAdmin);
+        subscribe->input(gid, uid, cmd, inpm, isAdmin);
+        stats->input2(gid, uid, cmd, inpm, isAdmin);
+        banlist->input(gid, uid, cmd, inpm, isAdmin);
+        broadcast->input(gid, uid, cmd, inpm, isAdmin);
+    }
+
+    permission->input(gid, uid, cmd, inpm, isAdmin);
+    protect->input(gid, uid, cmd, inpm, isAdmin);
+    headAdmin->input(gid, uid, cmd, inpm);
+    request->input(gid, uid, cmd, inpm, isAdmin);
+}
+
 void MessageProcessor::keepAlive()
 {
-    output << QString("Keeping alive... (%1)").arg(QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss"))
+    qDebug() << QString("Keeping alive... (%1)").arg(QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss"))
            << endl << flush;
     sendCommand("main_session");
 
     if (QTime::currentTime().hour() != hourlyCron)
     {
-        output << "Running Hourly Cron..." << endl << flush;
+        qDebug() << "Running Hourly Cron..." << endl << flush;
         hourlyCron = QTime::currentTime().hour();
         nameDatabase->refreshDatabase();
         stats->saveData();
@@ -174,7 +214,7 @@ void MessageProcessor::keepAlive()
         endDayCron = QDate::currentDate().toJulianDay();
     else if (QDate::currentDate().toJulianDay() != endDayCron)
     {
-        output << "Running End-day Cron..." << endl << flush;
+        qDebug() << "Running End-day Cron..." << endl << flush;
         endDayCron = QDate::currentDate().toJulianDay();
         foreach (qint64 gid, nameDatabase->groups().keys())
         {
@@ -193,6 +233,41 @@ void MessageProcessor::keepAlive()
 void MessageProcessor::sendCommand(const QByteArray &str)
 {
     proc->write(str + '\n');
+}
+
+void MessageProcessor::sendMessage(const QString &identity, QString message)
+{
+    if (!message.isEmpty())
+    {
+        message.replace("\n", "\\n");
+        message.replace("\"", "\\\"");
+
+        int idx = 0;
+        while (!message.isEmpty())
+        {
+            int newIdx = message.indexOf("\\n", idx);
+
+            if (newIdx == -1)
+                newIdx = message.length() - 1;
+            else
+                ++newIdx;
+
+            if (newIdx > MessageLimit || idx == message.length() - 1)
+            {
+                if (idx == 0 && newIdx > MessageLimit)
+                    message = message.mid(newIdx + 1);
+                else
+                {
+                    sendCommand("msg " + identity.toUtf8() + " \"" +
+                                message.mid(0, idx + 1).toUtf8() + '"');
+                    message = message.mid(idx + 1);
+                }
+                idx = 0;
+            }
+            else
+                idx = newIdx;
+        }
+    }
 }
 
 qint64 MessageProcessor::processDate(const QString &str)
@@ -219,16 +294,13 @@ QString MessageProcessor::convertToName(qint64 id)
     return name;
 }
 
-void MessageProcessor::processAs(const QString &gid, QString &uid, QString &str, bool inpm)
+void MessageProcessor::processAs(const QString &gid, QString &uid, QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
-    qint64 uidnum = uid.mid(5).toLongLong();
 
-    QByteArray respondTo = inpm ? uid.toUtf8() : gid.toUtf8();
+    QString respondTo = inpm ? uid : gid;
 
-    if (nameDatabase->groups().keys().contains(gidnum)
-        && (nameDatabase->groups()[gidnum].first == uidnum || uidnum == headaid)
-        && str.startsWith("!as"))
+    if (isAdmin && str.startsWith("!as"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
 
@@ -246,21 +318,20 @@ void MessageProcessor::processAs(const QString &gid, QString &uid, QString &str,
                 str = str.mid(idx).trimmed();
                 uid = "user#" + QString::number(targetuid);
 
-                sendCommand("msg " + respondTo + " \"As command executed successfully!\"");
+                sendMessage(respondTo, "As command executed successfully!");
             }
         }
     }
 }
 
-void MessageProcessor::rerunTelegram()
+void MessageProcessor::runTelegram()
 {
     if (shouldRun)
     {
-        qDebug() << "here rerunning bot...";
+        qDebug() << "Running bot...";
         proc->setReadChannel(QProcess::StandardOutput);
         QStringList args;
-        args << "-C" << "-R" << "-I";
+        args << "-W" << "-R" << "-I";
         proc->start(QCoreApplication::arguments()[1], args, QProcess::ReadWrite);
-        keepAlive();
     }
 }

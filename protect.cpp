@@ -21,14 +21,12 @@ void Protect::loadData()
         data[query.value(0).toLongLong()][query.value(1).toInt()] = query.value(2).toString();
 }
 
-void Protect::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
+void Protect::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
-    qint64 uidnum = uid.mid(5).toLongLong();
 
     if (nameDatabase->groups().keys().contains(gidnum)
-        && (nameDatabase->groups()[gidnum].first == uidnum || uidnum == messageProcessor->headAdminId())
-        && str.startsWith("!protect"))
+        && isAdmin && str.startsWith("!protect"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
         QString message;
@@ -63,20 +61,18 @@ void Protect::input(const QString &gid, const QString &uid, const QString &str, 
         {
             message = "Current protects for this group:";
             if (data[gidnum].isEmpty())
-                message += "\\nNothing!";
+                message += "\nNothing!";
             else
             {
                 if (data[gidnum].contains(0))
-                    message += QString("\\nName Protection: %1").arg(data[gidnum][0]);
+                    message += QString("\nName Protection: %1").arg(data[gidnum][0]);
 
                 if (data[gidnum].contains(1))
-                    message += QString("\\nPhoto Protection: %1").arg(data[gidnum][1]);
+                    message += QString("\nPhoto Protection: %1").arg(data[gidnum][1]);
             }
         }
 
-        if (!message.isEmpty())
-            messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                          message.replace('"', "\\\"").toUtf8() + '"');
+        messageProcessor->sendMessage(inpm ? uid : gid, message);
     }
 }
 
@@ -87,8 +83,10 @@ void Protect::rawInput(const QString &str)
 
     if (idxOfChat != -1 && idxOfUser != -1)
     {
-        qint64 gid = str.mid(idxOfChat + 5, str.indexOf(' ', idxOfChat + 5) - (idxOfChat + 5)).toLongLong();
-        qint64 uid = str.mid(idxOfUser + 5, str.indexOf(' ', idxOfUser + 5) - (idxOfUser + 5)).toLongLong();
+        qint64 gid = str.mid(idxOfChat + 5, str.indexOf('\e', idxOfChat + 5) - (idxOfChat + 5)).toLongLong();
+        qint64 uid = str.mid(idxOfUser + 5, str.indexOf('\e', idxOfUser + 5) - (idxOfUser + 5)).toLongLong();
+        QString sunGlass = QString() + QChar(55357) + QChar(56846);
+        QString pFace = QString() + QChar(55357) + QChar(56848);
 
         if (uid != messageProcessor->botId())
         {
@@ -104,7 +102,8 @@ void Protect::rawInput(const QString &str)
                         messageProcessor->sendCommand("rename_chat chat#" + QByteArray::number(gid)
                                                       + ' ' + data[gid][0].toUtf8());
                         messageProcessor->sendCommand("msg chat#" + QByteArray::number(gid)
-                                                      + " \"Protected group against name change. :| "
+                                                      + " \"Protected group against name change "
+                                                      + sunGlass.toUtf8() + ". " + pFace.toUtf8() + " "
                                                       + messageProcessor->convertToName(uid).toUtf8() + '"');
                     }
                 }
@@ -115,7 +114,8 @@ void Protect::rawInput(const QString &str)
                         messageProcessor->sendCommand("chat_set_photo chat#" + QByteArray::number(gid)
                                                       + ' ' + data[gid][1].toUtf8());
                         messageProcessor->sendCommand("msg chat#" + QByteArray::number(gid)
-                                                      + " \"Protected group against photo change. :| "
+                                                      + " \"Protected group against photo change "
+                                                      + sunGlass.toUtf8() + ". " + pFace.toUtf8() + " "
                                                       + messageProcessor->convertToName(uid).toUtf8() + '"');
                     }
                 }

@@ -1,46 +1,55 @@
 #include "calculator.h"
 #include "messageprocessor.h"
+#include "permission.h"
+#include "namedatabase.h"
 #include <QtCore>
 
 const qint64 Calculator::timeLimit = 2000;
 
-Calculator::Calculator(MessageProcessor *msgProc, QObject *parent) :
-    QObject(parent), messageProcessor(msgProc)
+Calculator::Calculator(NameDatabase *namedb, MessageProcessor *msgProc, Permission *perm, QObject *parent) :
+    QObject(parent), nameDatabase(namedb), messageProcessor(msgProc), permission(perm)
 {
     checkEndTimer = new QTimer(this);
     connect(checkEndTimer, SIGNAL(timeout()), this, SLOT(checkEndTime()));
     checkEndTimer->start(timeLimit);
 }
 
-void Calculator::input(const QString &gid, const QString &uid, const QString &msg, bool inpm)
+void Calculator::input(const QString &gid, const QString &uid, const QString &msg, bool inpm, bool isAdmin)
 {
+    qint64 gidnum = gid.mid(5).toLongLong();
+
     if (msg.startsWith("!calc"))
     {
-        int idx = msg.indexOf(' ');
-
-        if (idx != -1)
+        int perm = permission->getPermission(gidnum, "calc", "use_in_group", isAdmin, inpm);
+        if (inpm || perm == 1)
         {
-            while (idx < msg.size() && msg[idx] == ' ')
-                ++idx;
+            int idx = msg.indexOf(' ');
 
-            if (idx < msg.size())
+            if (idx != -1)
             {
-                QString cmd = msg.mid(idx).trimmed().replace('"', "\\\"");
+                while (idx < msg.size() && msg[idx] == ' ')
+                    ++idx;
 
-                QStringList args;
-                args << "-u" << "noone" << "./run.sh"
-                     << QString("from math import *; from random import *; print(%1)").arg(cmd);
+                if (idx < msg.size())
+                {
+                    QString cmd = msg.mid(idx).trimmed().replace('"', "\\\"");
 
-                QProcess *proc = new QProcess(this);
-                connect(proc, SIGNAL(finished(int)), this, SLOT(processCalculator()));
-                proc->start("sudo", args);
+                    QStringList args;
+                    args << "-u" << "noone" << "./run.sh"
+                         << QString("from math import *; from random import *; print(%1)").arg(cmd);
 
-                endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
+                    QProcess *proc = new QProcess(this);
+                    connect(proc, SIGNAL(finished(int)), this, SLOT(processCalculator()));
+                    proc->start("sudo", args);
 
-                QString identity = inpm ? uid : gid;
-                id[proc] = identity.toUtf8();
+                    endTime[proc] = QDateTime::currentMSecsSinceEpoch() + timeLimit;
+
+                    id[proc] = inpm ? uid : gid;
+                }
             }
         }
+        else if (perm == 2)
+            permission->sendRequest(gid, uid, msg, inpm);
     }
 }
 
@@ -68,11 +77,7 @@ void Calculator::processCalculator()
     QProcess *pyProc = qobject_cast<QProcess *>(sender());
     QByteArray answer = pyProc->readAllStandardOutput();
 
-    qDebug() << answer.length() << " Ready ";
-
-    QByteArray cmd = "msg " + id[pyProc] + " \"The Answer Is: "
-                     + answer.trimmed().replace('\n', "\\n").replace('"', "\\\"") + '"';
-    messageProcessor->sendCommand(cmd);
+    messageProcessor->sendMessage(id[pyProc], "The Answer Is: " + answer.trimmed());
 
     endTime.remove(pyProc);
     id.remove(pyProc);

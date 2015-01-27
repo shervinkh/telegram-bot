@@ -11,6 +11,7 @@ class MessageProcessor;
 class Database;
 class NameDatabase;
 class Subscribe;
+class Permission;
 
 class PollData
 {
@@ -45,6 +46,7 @@ private:
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Permission *permission;
     Subscribe *subscribe;
 
     typedef QMap<qint64, PollData> Polls;
@@ -61,10 +63,10 @@ private:
     void changeTitle(qint64 gid, qint64 pid, const QString &str);
 
 public:
-    explicit Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Subscribe *sub,
-                  QObject *parent = 0);
+    explicit Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
+                  Subscribe *sub, QObject *parent = 0);
     ~Poll();
-    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void saveData();
 
 public slots:

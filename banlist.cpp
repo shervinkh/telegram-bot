@@ -3,11 +3,13 @@
 #include "database.h"
 #include "messageprocessor.h"
 #include "namedatabase.h"
+#include "permission.h"
 #include <QSqlQuery>
 #include <QtCore>
 
-BanList::BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
+BanList::BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
+                 QObject *parent) :
+    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc), permission(perm)
 {
     loadData();
 }
@@ -44,62 +46,77 @@ void BanList::delBan(qint64 gid, qint64 uid)
     banned[gid].remove(uid);
 }
 
-void BanList::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
+void BanList::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
-    qint64 uidnum = uid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().keys().contains(gidnum)
-        && (nameDatabase->groups()[gidnum].first == uidnum || uidnum == messageProcessor->headAdminId())
-        && str.startsWith("!banlist"))
+    if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!banlist"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
 
         QString message;
+        int perm = 0;
 
         if (args.size() > 2 && (args[1].toLower().startsWith("del") || args[1].toLower().startsWith("rem")))
         {
-            bool ok;
-            qint64 uid = args[2].toLongLong(&ok);
+            perm = permission->getPermission(gidnum, "banlist", "delete", isAdmin, inpm);
 
-            if (ok)
+            if (perm == 1)
             {
-                delBan(gidnum, uid);
-                message = "Deleted from banlist " + messageProcessor->convertToName(uid) + "!";
+                bool ok;
+                qint64 uid = args[2].toLongLong(&ok);
+
+                if (ok)
+                {
+                    delBan(gidnum, uid);
+                    message = "Deleted from banlist " + messageProcessor->convertToName(uid) + "!";
+                }
             }
         }
         else if (args.size() > 2 && args[1].toLower().startsWith("add"))
         {
-            bool ok;
-            qint64 uid = args[2].toLongLong(&ok);
+            perm = permission->getPermission(gidnum, "banlist", "add", isAdmin, inpm);
 
-            if (ok)
+            if (perm == 1)
             {
-                addBan(gidnum, uid);
-                message = "Added to banlist " + messageProcessor->convertToName(uid) + "!";
+                bool ok;
+                qint64 uid = args[2].toLongLong(&ok);
+
+                if (ok)
+                {
+                    addBan(gidnum, uid);
+                    message = "Added to banlist " + messageProcessor->convertToName(uid) + "!";
+                }
             }
         }
         else
         {
-            if (banned[gidnum].isEmpty())
-                message = "Noone!";
-            else
+            perm = permission->getPermission(gidnum, "banlist", "view", isAdmin, inpm);
+
+            if (perm == 1)
             {
-                int i = 0;
-                foreach (qint64 banid, banned[gidnum])
+                if (banned[gidnum].isEmpty())
+                    message = "Noone!";
+                else
                 {
-                    message += QString("%1- %2").arg(i + 1).arg(messageProcessor->convertToName(banid));
+                    int i = 0;
+                    foreach (qint64 banid, banned[gidnum])
+                    {
+                        message += QString("%1- %2 (%3)").arg(i + 1).arg(banid)
+                                .arg(messageProcessor->convertToName(banid));
 
-                    if (i != banned[gidnum].size() - 1)
-                        message += "\\n";
+                        if (i != banned[gidnum].size() - 1)
+                            message += '\n';
 
-                    ++i;
+                        ++i;
+                    }
                 }
             }
         }
 
-        if (!message.isEmpty())
-            messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                          message.replace('"', "\\\"").toUtf8() + '"');
+        messageProcessor->sendMessage(inpm ? uid : gid, message);
+
+        if (perm == 2)
+            permission->sendRequest(gid, uid, str, inpm);
     }
 }

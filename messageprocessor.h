@@ -2,7 +2,6 @@
 #define MESSAGEPROCESSOR_H
 
 #include <QObject>
-#include <QTextStream>
 #include <QMap>
 
 class QProcess;
@@ -21,14 +20,18 @@ class Subscribe;
 class Group;
 class Protect;
 class HeadAdmin;
+class Permission;
+class Request;
+
+enum {Admin = 0, RequestAdmin, NA, All};
 
 class MessageProcessor : public QObject
 {
     Q_OBJECT
 private:
+    static const int MessageLimit;
     static const qint64 keepAliveInterval;
 
-    QTextStream output;
     QProcess *proc;
 
     QTimer *keepAliveTimer;
@@ -47,6 +50,8 @@ private:
     Group *group;
     Protect *protect;
     HeadAdmin *headAdmin;
+    Permission *permission;
+    Request *request;
 
     qint64 endDayCron;
     qint64 hourlyCron;
@@ -56,14 +61,18 @@ private:
 
     bool shouldRun;
 
-    void processAs(const QString &gid, QString &uid, QString &str, bool inpm);
+    QString cmd, uid, gid;
+    bool cmdContinue;
+
+    void processAs(const QString &gid, QString &uid, QString &str, bool inpm, bool isAdmin);
     void loadConfig();
 
 public:
     explicit MessageProcessor(QObject *parent = 0);
     ~MessageProcessor();
     void sendCommand(const QByteArray &str);
-
+    void sendMessage(const QString &identity, QString message);
+    void processCommand(const QString &gid, QString uid, QString cmd, bool inpm, bool isAdmin);
     qint64 headAdminId() const {return headaid;}
     qint64 botId() const {return bid;}
 
@@ -73,7 +82,7 @@ public:
 public slots:
     void readData();
     void keepAlive();
-    void rerunTelegram();
+    void runTelegram();
 };
 
 #endif // MESSAGEPROCESSOR_H

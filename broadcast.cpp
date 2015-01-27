@@ -1,51 +1,50 @@
 #include "broadcast.h"
 #include "messageprocessor.h"
 #include "namedatabase.h"
+#include "permission.h"
 #include <QtCore>
 
-Broadcast::Broadcast(NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), nameDatabase(namedb), messageProcessor(msgproc)
+Broadcast::Broadcast(NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm, QObject *parent) :
+    QObject(parent), nameDatabase(namedb), messageProcessor(msgproc), permission(perm)
 {
 }
 
-void Broadcast::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
+void Broadcast::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
-    qint64 uidnum = uid.mid(5).toLongLong();
 
-    if (nameDatabase->groups().keys().contains(gidnum)
-        && (nameDatabase->groups()[gidnum].first == uidnum || uidnum == messageProcessor->headAdminId())
-        && str.startsWith("!broadcast"))
+    if (nameDatabase->groups().keys().contains(gidnum) && str.startsWith("!broadcast"))
     {
-        int idx = str.indexOf(' ');
+        int perm = permission->getPermission(gidnum, "broadcast", "use", isAdmin, inpm);
 
-        if (idx != -1)
+        if (perm == 1)
         {
-            while (idx < str.size() && str[idx] == ' ')
-                ++idx;
+            int idx = str.indexOf(' ');
 
-            if (idx < str.size())
+            if (idx != -1)
             {
-                QString msg = str.mid(idx).trimmed();
-                QString totalMsg = QString("Broadcast message from \"%1\" group:\\n%2")
-                                   .arg(nameDatabase->groups()[gidnum].second)
-                                   .arg(msg);
+                while (idx < str.size() && str[idx] == ' ')
+                    ++idx;
 
-                foreach (qint64 uid, nameDatabase->userList(gidnum).keys())
-                    sendMessage(uid, totalMsg);
+                if (idx < str.size())
+                {
+                    QString msg = str.mid(idx).trimmed();
+                    QString totalMsg = QString("Broadcast message from \"%1\" group:\\n%2")
+                                       .arg(nameDatabase->groups()[gidnum].second)
+                                       .arg(msg);
 
-                int numMemebers = nameDatabase->userList(gidnum).size();
+                    foreach (qint64 uid, nameDatabase->userList(gidnum).keys())
+                        messageProcessor->sendMessage("user#" + QString::number(uid), totalMsg);
 
-                messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) +
-                                              QString(" \"Sent broadcast message to %1 group member(s)!\"")
-                                              .arg(numMemebers).toUtf8());
+                    int numMemebers = nameDatabase->userList(gidnum).size();
+
+                    messageProcessor->sendMessage(inpm ? uid : gid,
+                                                  QString("Sent broadcast message to %1 group member(s)!")
+                                                  .arg(numMemebers));
+                }
             }
         }
+        else if (perm == 2)
+            permission->sendRequest(gid, uid, str, inpm);
     }
-}
-
-void Broadcast::sendMessage(qint64 uid, QString str)
-{
-    messageProcessor->sendCommand("msg user#" + QByteArray::number(uid) + " \"" +
-                                  str.replace('"', "\\\"").toUtf8() + '"');
 }

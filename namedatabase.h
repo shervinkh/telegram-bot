@@ -29,7 +29,9 @@ private:
 
     bool gettingList;
 
-    void getNames(qint64 gid);
+    void refreshGroupNames(qint64 gid);
+    void refreshGroup(qint64 gid);
+    void refreshUser(qint64 uid);
 
 public:
     explicit NameDatabase(Database *db, MessageProcessor *mp, QObject *parent = 0);

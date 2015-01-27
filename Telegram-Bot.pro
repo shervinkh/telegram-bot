@@ -31,7 +31,9 @@ SOURCES += main.cpp \
     subscribe.cpp \
     group.cpp \
     protect.cpp \
-    headadmin.cpp
+    headadmin.cpp \
+    permission.cpp \
+    request.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -49,4 +51,6 @@ HEADERS += \
     subscribe.h \
     group.h \
     protect.h \
-    headadmin.h
+    headadmin.h \
+    permission.h \
+    request.h

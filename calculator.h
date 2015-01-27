@@ -6,7 +6,9 @@
 
 class QProcess;
 class QTimer;
+class NameDatabase;
 class MessageProcessor;
+class Permission;
 
 class Calculator : public QObject
 {
@@ -14,16 +16,18 @@ class Calculator : public QObject
 private:
     static const qint64 timeLimit;
 
-    QMap<QProcess *, QByteArray> id;
+    QMap<QProcess *, QString> id;
     QMap<QProcess *, qint64> endTime;
 
     QTimer *checkEndTimer;
 
+    NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Permission *permission;
 
 public:
-    explicit Calculator(MessageProcessor *msgProc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &msg, bool inpm);
+    explicit Calculator(NameDatabase *namedb, MessageProcessor *msgProc, Permission *perm, QObject *parent = 0);
+    void input(const QString &gid, const QString &uid, const QString &msg, bool inpm, bool isAdmin);
 
 public slots:
     void checkEndTime();

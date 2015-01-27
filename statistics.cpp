@@ -2,15 +2,20 @@
 #include "database.h"
 #include "namedatabase.h"
 #include "messageprocessor.h"
+#include "permission.h"
 #include <QSqlQuery>
 #include <QVariant>
 #include <QtCore>
 
-const int Statistics::GraphDelay = 3000;
+const int Statistics::GraphDelay = 5000;
 
-Statistics::Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
+Statistics::Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm, QObject *parent) :
+    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc), permission(perm)
 {
+    activityQueueTimer = new QTimer(this);
+    activityQueueTimer->setInterval(GraphDelay);
+    connect(activityQueueTimer, SIGNAL(timeout()), this, SLOT(processActivityQueue()));
+
     loadData();
 }
 
@@ -84,127 +89,154 @@ void Statistics::saveData()
     QSqlDatabase::database().commit();
 }
 
-void Statistics::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
+void Statistics::input1(const QString &gid, const QString &uid, const QString &str)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 usernum = uid.mid(5).toLongLong();
 
     if (nameDatabase->groups().keys().contains(gidnum))
     {
-        if (!inpm)
-        {
-            ++data[QDate::currentDate().toJulianDay()][gidnum][usernum].count();
-            data[QDate::currentDate().toJulianDay()][gidnum][usernum].length() += str.length();
-            ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
-            data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
-            ++data[QDate::currentDate().toJulianDay()][gidnum][-1 - QTime::currentTime().hour()].count();
-        }
+        ++data[QDate::currentDate().toJulianDay()][gidnum][usernum].count();
+        data[QDate::currentDate().toJulianDay()][gidnum][usernum].length() += str.length();
+        ++data[QDate::currentDate().toJulianDay()][gidnum][0].count();
+        data[QDate::currentDate().toJulianDay()][gidnum][0].length() += str.length();
+        ++data[QDate::currentDate().toJulianDay()][gidnum][-1 - QTime::currentTime().hour()].count();
+    }
+}
 
-        if (str.startsWith("!stat")
-            && (usernum == nameDatabase->groups()[gidnum].first || usernum == messageProcessor->headAdminId()))
+void Statistics::input2(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
+{
+    qint64 gidnum = gid.mid(5).toLongLong();
+    qint64 usernum = uid.mid(5).toLongLong();
+
+    if (nameDatabase->groups().keys().contains(gidnum))
+    {
+        if (str.startsWith("!stat"))
         {
             QStringList args = str.split(' ', QString::SkipEmptyParts);
             if (args.size() >= 3)
                 giveStat(gid.mid(5).toLongLong(), args[1], args[2], args.size() > 3 ? args[3] : "",
-                         inpm ? usernum : -1);
+                    usernum, inpm, isAdmin);
         }
     }
 }
 
 void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit,
-                          qint64 uid)
+                          qint64 uid, bool inpm, bool isAdmin)
 {
     qint64 dateNum = MessageProcessor::processDate(date);
-    QByteArray sendee = (uid == -1) ? ("chat#" + QByteArray::number(gid)) : ("user#" + QByteArray::number(uid));
+    QString sendee = (uid == -1 || !inpm) ? ("chat#" + QString::number(gid)) : ("user#" + QString::number(uid));
 
     if (dateNum > 0 && data.contains(dateNum) && data[dateNum].contains(gid))
     {
         QString result;
+        int perm = 0;
 
         if (factor.toLower().startsWith("sum"))
-            result = QString("Statistics Summary For %1:\\nTotal Posts' Count: %2\\n"
-                             "Total Posts' Length: %3").arg(date)
-                     .arg(data[dateNum][gid][0].count()).arg(data[dateNum][gid][0].length());
+        {
+            perm = permission->getPermission(gid, "stat", "summary", isAdmin, inpm);
+            if (perm == 1)
+            {
+                result = QString("Statistics Summary For %1:\\nTotal Posts' Count: %2\\n"
+                                 "Total Posts' Length: %3").arg(date)
+                        .arg(data[dateNum][gid][0].count()).arg(data[dateNum][gid][0].length());
+            }
+        }
         else if (factor.toLower().startsWith("maxc") || factor.toLower().startsWith("maxl")
                  || factor.toLower().startsWith("maxd"))
         {
-            int type = factor.toLower().startsWith("maxc") ? -1 : factor.toLower().startsWith("maxd");
-            int start, end;
-            bool ok1, ok2;
-
-            if (limit.toLower().startsWith("all"))
+            perm = permission->getPermission(gid, "stat", "count_length_density", isAdmin, inpm);
+            if (perm == 1)
             {
-                start = 1;
-                end = data[dateNum][gid].size();
-                ok1 = ok2 = true;
-            }
-            else
-            {
-                int idx = limit.indexOf('-');
+                int type = factor.toLower().startsWith("maxc") ? -1 : factor.toLower().startsWith("maxd");
+                int start, end;
+                bool ok1, ok2;
 
-                if (idx == -1)
+                if (limit.toLower().startsWith("all"))
                 {
-                    start = end = limit.toInt(&ok1);
-                    ok2 = true;
+                    start = 1;
+                    end = data[dateNum][gid].size();
+                    ok1 = ok2 = true;
                 }
                 else
                 {
-                    start = limit.mid(0, idx).toInt(&ok1);
-                    end = limit.mid(idx + 1).toInt(&ok2);
-                }
-            }
+                    int idx = limit.indexOf('-');
 
-            if (ok1 && ok2 && start > 0 && end > 0 && end >= start)
-            {
-                tempList.clear();
-
-                QMapIterator<qint64, UserStatsData> usersIter(data[dateNum][gid]);
-                while (usersIter.hasNext())
-                {
-                    usersIter.next();
-
-                    if (usersIter.key() > 0)
-                        tempList.append(DataPair(usersIter.value(), usersIter.key()));
-                }
-
-                start = qMin(start, tempList.length());
-                end = qMin(end, tempList.length());
-
-                qSort(tempList.begin(), tempList.end(),
-                      (type == -1) ? compareByCount : (type ? compareByDensity : compareByLength));
-
-                result = QString("People with most post %1 on %2:\\n")
-                        .arg((type == -1) ? "count" : (type ? "density" : "length")).arg(date);
-
-                for (int i = start; i <= end; ++i)
-                {
-                    QString number;
-                    if (type == 1)
-                        number = QString::number(static_cast<qreal>(tempList[i - 1].first.length()) / tempList[i - 1].first.count(), 'f', 2);
+                    if (idx == -1)
+                    {
+                        start = end = limit.toInt(&ok1);
+                        ok2 = true;
+                    }
                     else
-                        number = QString::number((type == -1) ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
+                    {
+                        start = limit.mid(0, idx).toInt(&ok1);
+                        end = limit.mid(idx + 1).toInt(&ok2);
+                    }
+                }
 
-                    result += QString("%1- %2 (%3)").arg(i).arg(messageProcessor->convertToName(tempList[i - 1].second))
-                              .arg(number);
+                if (ok1 && ok2 && start > 0 && end > 0 && end >= start)
+                {
+                    tempList.clear();
 
-                    if (i != end)
-                        result += "\\n";
+                    QMapIterator<qint64, UserStatsData> usersIter(data[dateNum][gid]);
+                    while (usersIter.hasNext())
+                    {
+                        usersIter.next();
+
+                        if (usersIter.key() > 0)
+                            tempList.append(DataPair(usersIter.value(), usersIter.key()));
+                    }
+
+                    start = qMin(start, tempList.length());
+                    end = qMin(end, tempList.length());
+
+                    qSort(tempList.begin(), tempList.end(),
+                          (type == -1) ? compareByCount : (type ? compareByDensity : compareByLength));
+
+                    result = QString("People with most post %1 on %2:\n")
+                            .arg((type == -1) ? "count" : (type ? "density" : "length")).arg(date);
+
+                    for (int i = start; i <= end; ++i)
+                    {
+                        QString number;
+                        if (type == 1)
+                            number = QString::number(static_cast<qreal>(tempList[i - 1].first.length()) / tempList[i - 1].first.count(), 'f', 2);
+                        else
+                            number = QString::number((type == -1) ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
+
+                        result += QString("%1- %2 (%3)").arg(i).arg(messageProcessor->convertToName(tempList[i - 1].second))
+                                .arg(number);
+
+                        if (i != end)
+                            result += "\n";
+                    }
                 }
             }
         }
         else if (factor.toLower().startsWith("act"))
         {
-            activityQueue.push_back(QueueData(gid, DateAndSendee(dateNum, sendee)));
+            perm = permission->getPermission(gid, "stat", "activity", isAdmin, inpm);
+            if (perm == 1)
+            {
+                activityQueue.push_back(QueueData(gid, DateAndSendee(dateNum, sendee.toUtf8())));
 
-            if (activityQueue.size() == 1)
-                QTimer::singleShot(GraphDelay, this, SLOT(processActivityQueue()));
+                if (activityQueue.size() == 1 && !activityQueueTimer->isActive())
+                    processActivityQueue();
+            }
         }
 
         if (!result.isEmpty() && dateNum == QDate::currentDate().toJulianDay())
-            result += QString("\\nSo far");
+            result += QString("\nSo far");
 
-        if (!result.isEmpty())
-            messageProcessor->sendCommand("msg " + sendee + " \"" + result.replace('"', "\\\"").toUtf8() + '"');
+        messageProcessor->sendMessage(sendee, result);
+
+        if (perm == 2)
+        {
+            QString newgid = "chat#" + QString::number(gid);
+            QString newuid = "user#" + QString::number(uid);
+            QString cmd = QString("!stat %1 %2 %3").arg(date).arg(factor).arg(limit);
+            permission->sendRequest(newgid, newuid, cmd, inpm);
+        }
     }
 }
 
@@ -229,9 +261,7 @@ void Statistics::processGraph()
 
     proc->deleteLater();
     activityQueue.pop_front();
-
-    if (!activityQueue.isEmpty())
-        QTimer::singleShot(GraphDelay, this, SLOT(processActivityQueue()));
+    activityQueueTimer->start();
 }
 
 void Statistics::processActivityQueue()
@@ -261,5 +291,8 @@ void Statistics::processActivityQueue()
         gnuplot->start("gnuplot", args);
     }
     else
+    {
         activityQueue.pop_front();
+        processActivityQueue();
+    }
 }

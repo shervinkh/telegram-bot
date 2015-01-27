@@ -2,11 +2,12 @@
 #include "database.h"
 #include "messageprocessor.h"
 #include "namedatabase.h"
+#include "permission.h"
 #include <QtCore>
 #include <QSqlQuery>
 
-Subscribe::Subscribe(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent) :
-    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc)
+Subscribe::Subscribe(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm, QObject *parent) :
+    QObject(parent), database(db), nameDatabase(namedb), messageProcessor(msgproc), permission(perm)
 {
     loadData();
 }
@@ -43,7 +44,7 @@ void Subscribe::delUser(qint64 gid, qint64 uid)
     data[gid].removeAll(uid);
 }
 
-void Subscribe::input(const QString &gid, const QString &uid, const QString &str, bool inpm)
+void Subscribe::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
@@ -53,58 +54,84 @@ void Subscribe::input(const QString &gid, const QString &uid, const QString &str
         QStringList args = str.split(' ', QString::SkipEmptyParts);
 
         QString message;
+        int perm = 0;
 
         if (args.size() > 1 && args[1].toLower().startsWith("unsub"))
         {
-            if (data[gidnum].contains(uidnum))
+            perm = permission->getPermission(gidnum, "subscribe", "unsubscribe", isAdmin, inpm);
+            if (perm == 1)
             {
-                delUser(gidnum, uidnum);
-                message = QString("%1 unsubscribed successfully!").arg(messageProcessor->convertToName(uidnum));
+                if (data[gidnum].contains(uidnum))
+                {
+                    delUser(gidnum, uidnum);
+                    message = QString("%1 unsubscribed successfully!").arg(messageProcessor->convertToName(uidnum));
+                }
+                else
+                    message = QString("%1 is not subscribed!").arg(messageProcessor->convertToName(uidnum));
             }
-            else
-                message = QString("%1 is not subscribed!").arg(messageProcessor->convertToName(uidnum));
         }
         else if (args.size() > 1 && args[1].toLower().startsWith("sub"))
         {
-            if (!data[gidnum].contains(uidnum))
+            perm = permission->getPermission(gidnum, "subscribe", "subscribe", isAdmin, inpm);
+            if (perm == 1)
             {
-                addUser(gidnum, uidnum);
-                message = QString("%1 subscribed successfully!").arg(messageProcessor->convertToName(uidnum));
+                if (!data[gidnum].contains(uidnum))
+                {
+                    addUser(gidnum, uidnum);
+                    message = QString("%1 subscribed successfully!").arg(messageProcessor->convertToName(uidnum));
+                }
+                else
+                    message = QString("%1 is already subscribed!").arg(messageProcessor->convertToName(uidnum));
             }
-            else
-                message = QString("%1 is already subscribed!").arg(messageProcessor->convertToName(uidnum));
         }
         else
         {
-            if (data[gidnum].isEmpty())
-                message = "Noone!";
-            else
+            perm = permission->getPermission(gidnum, "subscribe", "view", isAdmin, inpm);
+            if (perm == 1)
             {
-                int i = 0;
-                foreach (qint64 id, data[gidnum])
+                if (data[gidnum].isEmpty())
+                    message = "Noone!";
+                else
                 {
-                    message += QString("%1- %2").arg(i + 1).arg(messageProcessor->convertToName(id));
+                    int i = 0;
+                    foreach (qint64 id, data[gidnum])
+                    {
+                        message += QString("%1- %2").arg(i + 1).arg(messageProcessor->convertToName(id));
 
-                    if (i != data[gidnum].size() - 1)
-                        message += "\\n";
+                        if (i != data[gidnum].size() - 1)
+                            message += "\n";
 
-                    ++i;
+                        ++i;
+                    }
                 }
             }
         }
 
-        if (!message.isEmpty())
-            messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                          message.replace('"', "\\\"").toUtf8() + '"');
+        messageProcessor->sendMessage(inpm ? uid : gid, message);
+
+        if (perm == 2)
+            permission->sendRequest(gid, uid, str, inpm);
     }
 }
 
 void Subscribe::postToSubscribed(qint64 gid, const QString &str)
 {
-    QString message = QString("Notification from \"%1\":\\n%2").arg(nameDatabase->groups()[gid].second)
-                                                               .arg(str).replace('"', "\\\"");
+    QString message = QString("Notification from \"%1\":\n%2").arg(nameDatabase->groups()[gid].second)
+                                                               .arg(str);
 
     foreach (qint64 uid, data[gid])
-        messageProcessor->sendCommand("msg user#" + QByteArray::number(uid) + " \""
-                                      + message.toUtf8() + '"');
+        messageProcessor->sendMessage("user#" + QString::number(uid), message);
+}
+
+void Subscribe::postToSubscribedAdmin(qint64 gid, const QString &str)
+{
+    qint64 adminid = nameDatabase->groups()[gid].first;
+
+    if (data[gid].contains(adminid))
+    {
+        QString message = QString("Notification from \"%1\":\n%2").arg(nameDatabase->groups()[gid].second)
+                                                                   .arg(str);
+
+        messageProcessor->sendMessage("user#" + QString::number(adminid), message);
+    }
 }

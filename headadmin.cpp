@@ -34,7 +34,13 @@ void HeadAdmin::input(const QString &gid, const QString &uid, const QString &str
             else
                 curgid = args[2].toLongLong(&ok1);
 
-            curuid = args[3].toLongLong(&ok2);
+            if (args[3].toLower().startsWith("me"))
+            {
+                curuid = uidnum;
+                ok2 = true;
+            }
+            else
+                curuid = args[3].toLongLong(&ok2);
 
             int idx = str.indexOf(' ', str.indexOf(args[3]));
             while (str[idx] == ' ')
@@ -72,19 +78,44 @@ void HeadAdmin::input(const QString &gid, const QString &uid, const QString &str
         else if (args.size() > 3 && args[1].toLower().startsWith("admin"))
         {
             bool ok1, ok2;
-            qint64 curgid = args[2].toLongLong(&ok1);
-            qint64 curuid = args[3].toLongLong(&ok2);
+
+            qint64 curgid;
+            if (args[2].toLower().startsWith("here"))
+            {
+                curgid = gidnum;
+                ok1 = true;
+            }
+            else
+                curgid = args[2].toLongLong(&ok1);
+
+            qint64 curuid;
+            if (args[3].toLower().startsWith("me"))
+            {
+                curuid = uidnum;
+                ok2 = true;
+            }
+            else
+                curuid = args[3].toLongLong(&ok2);
 
             if (ok1 && ok2 && nameDatabase->groups().keys().contains(curgid))
             {
                 changeAdmin(curgid, curuid);
-                message = QString("Changed group#%1's admin to user#%2!").arg(curgid).arg(curuid);
+                message = QString("Changed group#%1's admin to user#%2 (%3)!").arg(curgid).arg(curuid)
+                          .arg(messageProcessor->convertToName(curuid));
             }
         }
         else if (args.size() > 3 && args[1].toLower().startsWith("name"))
         {
             bool ok;
-            qint64 curgid = args[2].toLongLong(&ok);
+            qint64 curgid;
+
+            if (args[2].toLower().startsWith("here"))
+            {
+                curgid = gidnum;
+                ok = true;
+            }
+            else
+                curgid = args[2].toLongLong(&ok);
 
             if (ok && nameDatabase->groups().keys().contains(curgid))
             {
@@ -103,12 +134,12 @@ void HeadAdmin::input(const QString &gid, const QString &uid, const QString &str
             message = "Monitoring groups:";
 
             if (nameDatabase->groups().isEmpty())
-                message += "\\nNo Group!";
+                message += "\nNo Group!";
             else
             {
                 int idx = 1;
                 foreach (qint64 curgid, nameDatabase->groups().keys())
-                    message += QString("\\n%1- group#%2 (Admin: %3 - %4) (Name: %5)").arg(idx++)
+                    message += QString("\n%1- group#%2 (Admin: %3 - %4) (Name: %5)").arg(idx++)
                                .arg(curgid)
                                .arg(nameDatabase->groups()[curgid].first)
                                .arg(messageProcessor->convertToName(nameDatabase->groups()[curgid].first))
@@ -119,9 +150,7 @@ void HeadAdmin::input(const QString &gid, const QString &uid, const QString &str
             message = QString("The headadmin is %1(%2).").arg(messageProcessor->headAdminId())
                         .arg(messageProcessor->convertToName(messageProcessor->headAdminId()));
 
-        if (!message.isEmpty())
-            messageProcessor->sendCommand("msg " + (inpm ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                          message.replace('"', "\\\"").toUtf8() + '"');
+        messageProcessor->sendMessage(inpm ? uid : gid, message);
     }
 }
 

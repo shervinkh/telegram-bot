@@ -8,6 +8,7 @@
 class Database;
 class NameDatabase;
 class MessageProcessor;
+class Permission;
 
 class BanList : public QObject
 {
@@ -16,6 +17,7 @@ private:
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Permission *permission;
 
     typedef QSet<qint64> Users;
     QMap<qint64, Users> banned;
@@ -25,8 +27,9 @@ private:
     void delBan(qint64 gid, qint64 uid);
 
 public:
-    explicit BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    explicit BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
+                     QObject *parent = 0);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     const QMap<qint64, Users> &bannedUsers() const {return banned;}
 
 public slots:

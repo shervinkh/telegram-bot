@@ -28,10 +28,24 @@ void NameDatabase::loadData()
 void NameDatabase::refreshDatabase()
 {
     foreach (qint64 gid, monitoringGroups.keys())
-    {
-        messageProcessor->sendCommand("chat_info chat#" + QByteArray::number(gid));
-        ids[gid].clear();
-    }
+        refreshGroup(gid);
+}
+
+void NameDatabase::refreshGroup(qint64 gid)
+{
+    messageProcessor->sendCommand("chat_info chat#" + QByteArray::number(gid));
+    ids[gid].clear();
+}
+
+void NameDatabase::refreshUser(qint64 uid)
+{
+    messageProcessor->sendCommand("user_info user#" + QByteArray::number(uid));
+}
+
+void NameDatabase::refreshGroupNames(qint64 gid)
+{
+    foreach (qint64 id, ids[gid].keys())
+        refreshUser(id);
 }
 
 void NameDatabase::input(const QString &str)
@@ -44,15 +58,46 @@ void NameDatabase::input(const QString &str)
         {
             int idxOfMessage = str.indexOf(' ', idxOfUser + 1);
             QString message = str.mid(idxOfMessage).trimmed();
-            if (message.toLower().startsWith("added user") || message.toLower().startsWith("deleted user"))
-                refreshDatabase();
+
+            int idxOfUser2 = str.indexOf("user#", idxOfMessage);
+
+            if (message.toLower().startsWith("added user"))
+            {
+                qint64 gid = str.mid(idxOfChat + 5, str.indexOf('\e', idxOfChat + 5) - (idxOfChat + 5)).toLongLong();
+                qint64 uid_par = str.mid(idxOfUser + 5, str.indexOf('\e', idxOfUser + 5) - (idxOfUser + 5)).toLongLong();
+                qint64 uid_new = str.mid(idxOfUser2 + 5, str.indexOf('\e', idxOfUser2 + 5) - (idxOfUser2 + 5)).toLongLong();
+                ids[gid][uid_new] = uid_par;
+                refreshUser(uid_new);
+            }
+            else if (message.toLower().startsWith("deleted user"))
+            {
+                qint64 gid = str.mid(idxOfChat + 5, str.indexOf('\e', idxOfChat + 5) - (idxOfChat + 5)).toLongLong();
+                qint64 uid = str.mid(idxOfUser2 + 5, str.indexOf('\e', idxOfUser2 + 5) - (idxOfUser2 + 5)).toLongLong();
+                ids[gid].remove(uid);
+
+                bool isValid = false;
+                foreach (qint64 gid, monitoringGroups.keys())
+                    if (ids[gid].contains(uid))
+                        isValid = true;
+
+                if (!isValid)
+                    data.remove(uid);
+            }
         }
+    }
+
+    if (str.indexOf("updated name") != -1)
+    {
+        int idxOfUser = str.indexOf("user#");
+        qint64 uid = str.mid(idxOfUser + 5, str.indexOf('\e', idxOfUser + 5) - (idxOfUser + 5)).toLongLong();
+        if (data.contains(uid))
+            refreshUser(uid);
     }
 
     if (gettingList && !str.startsWith("\t\t"))
     {
         gettingList = false;
-        getNames(lastGidSeen);
+        refreshGroupNames(lastGidSeen);
     }
 
     if (str.startsWith("\t\t"))
@@ -61,8 +106,8 @@ void NameDatabase::input(const QString &str)
 
         int firstIdx = str.indexOf("user#");
         int secondIdx = str.indexOf("user#", firstIdx + 1);
-        qint64 user = str.mid(firstIdx + 5, str.indexOf(' ', firstIdx) - (firstIdx + 5)).toLongLong();
-        qint64 parent = str.mid(secondIdx + 5, str.indexOf(' ', secondIdx) - (secondIdx + 5)).toLongLong();
+        qint64 user = str.mid(firstIdx + 5, str.indexOf('\e', firstIdx) - (firstIdx + 5)).toLongLong();
+        qint64 parent = str.mid(secondIdx + 5, str.indexOf('\e', secondIdx) - (secondIdx + 5)).toLongLong();
 
         ids[lastGidSeen][user] = parent;
     }
@@ -79,16 +124,10 @@ void NameDatabase::input(const QString &str)
     {
         int uididx = str.indexOf("user#");
         if (uididx != -1)
-            lastUidSeen = str.mid(uididx + 5, str.indexOf(' ', uididx) - (uididx + 5)).toLongLong();
+            lastUidSeen = str.mid(uididx + 5, str.indexOf('\e', uididx) - (uididx + 5)).toLongLong();
 
         int gididx = str.indexOf("chat#");
         if (gididx != -1)
-            lastGidSeen = str.mid(gididx + 5, str.indexOf(' ', gididx) - (gididx + 5)).toLongLong();
+            lastGidSeen = str.mid(gididx + 5, str.indexOf('\e', gididx) - (gididx + 5)).toLongLong();
     }
-}
-
-void NameDatabase::getNames(qint64 gid)
-{
-    foreach (qint64 id, ids[gid].keys())
-        messageProcessor->sendCommand("user_info user#" + QByteArray::number(id));
 }

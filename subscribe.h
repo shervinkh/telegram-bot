@@ -7,6 +7,7 @@
 class Database;
 class NameDatabase;
 class MessageProcessor;
+class Permission;
 
 class Subscribe : public QObject
 {
@@ -15,6 +16,7 @@ private:
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Permission *permission;
 
     typedef QList<qint64> UsersList;
     QMap<qint64, UsersList> data;
@@ -24,9 +26,11 @@ private:
     void addUser(qint64 gid, qint64 uid);
 
 public:
-    explicit Subscribe(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
-    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    explicit Subscribe(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
+                       QObject *parent = 0);
+    void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void postToSubscribed(qint64 gid, const QString &str);
+    void postToSubscribedAdmin(qint64 gid, const QString &str);
 
 public slots:
 

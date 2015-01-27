@@ -2,6 +2,7 @@
 #include "database.h"
 #include "namedatabase.h"
 #include "messageprocessor.h"
+#include "permission.h"
 #include <QtCore>
 #include <QtSql>
 
@@ -39,7 +40,7 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
             qint64 id = args[2].toLongLong(&ok);
 
             if (ok && nameDatabase->groups().keys().contains(id) &&
-                      nameDatabase->userList(id).contains(uidnum))
+               (nameDatabase->userList(id).contains(uidnum) || uidnum == messageProcessor->headAdminId()))
             {
                 setGroup(uidnum, id);
                 message = QString("Your group has been set to %1 (%2).").arg(id)
@@ -57,7 +58,7 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
             qint64 id = args[2].toLongLong(&ok);
 
             if (ok && nameDatabase->groups().keys().contains(id) &&
-                      nameDatabase->userList(id).contains(uidnum))
+                (nameDatabase->userList(id).contains(uidnum) || uidnum == messageProcessor->headAdminId()))
             {
                 qint64 adminid = nameDatabase->groups()[id].first;
 
@@ -78,7 +79,7 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
                                                        .arg(messageProcessor->convertToName(curuid))
                                                        .arg(title);
                     if (idx != size)
-                        message += "\\n";
+                        message += '\n';
 
                     ++idx;
                 }
@@ -88,35 +89,31 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
         {
             QList<qint64> gids;
             foreach (qint64 curgid, nameDatabase->groups().keys())
-                if (nameDatabase->userList(curgid).keys().contains(uidnum))
+                if (nameDatabase->userList(curgid).keys().contains(uidnum) ||
+                    uidnum == messageProcessor->headAdminId())
                     gids.append(curgid);
 
             if (gids.isEmpty())
                 message = "Your're not a memeber of groups I manage!";
             else
             {
-                message = QString("Your groups:\\n");
+                message = QString("Your groups:");
 
                 int idx = 1;
                 foreach (qint64 curgid, gids)
                 {
                     bool isThis = data.contains(uidnum) && (data[uidnum] == curgid);
 
-                    message += QString("%1- %2 (%3)%4").arg(idx).arg(curgid)
+                    message += QString("\n%1- %2 (%3)%4").arg(idx).arg(curgid)
                                                      .arg(nameDatabase->groups()[curgid].second)
                                                      .arg(isThis ? " (*)" : "");
-
-                    if (idx != gids.size())
-                        message += "\\n";
 
                     ++idx;
                 }
             }
         }
 
-        if (!message.isEmpty())
-            messageProcessor->sendCommand("msg " + (gid.isEmpty() ? uid.toUtf8() : gid.toUtf8()) + " \"" +
-                                          message.toUtf8() + '"');
+        messageProcessor->sendMessage(gid.isEmpty() ? uid : gid, message);
     }
 }
 

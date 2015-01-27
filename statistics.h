@@ -25,6 +25,8 @@ public:
 class Database;
 class NameDatabase;
 class MessageProcessor;
+class Permission;
+class QTimer;
 
 class Statistics : public QObject
 {
@@ -49,6 +51,9 @@ private:
     Database *database;
     NameDatabase *nameDatabase;
     MessageProcessor *messageProcessor;
+    Permission *permission;
+
+    QTimer *activityQueueTimer;
 
     void loadData();
 
@@ -69,11 +74,13 @@ private:
     }
 
 public:
-    explicit Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
+    explicit Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
+                        QObject *parent = 0);
     ~Statistics();
-    void input(const QString &gid, const QString &uid, const QString &str, bool inpm);
+    void input1(const QString &gid, const QString &uid, const QString &str);
+    void input2(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit = QString(),
-                  qint64 uid = -1);
+                  qint64 uid = -1, bool inpm = false, bool isAdmin = true);
     void cleanUpBefore(qint64 date);
     void saveData();
 
