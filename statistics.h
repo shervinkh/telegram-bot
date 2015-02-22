@@ -10,16 +10,19 @@ class UserStatsData
 private:
     qint64 cnt;
     qint64 len;
+    qint64 onl;
 
 public:
-    UserStatsData() : cnt(0), len(0) {}
-    UserStatsData(qint64 _cnt, qint64 _len)
-        : cnt(_cnt), len(_len) {}
+    UserStatsData() : cnt(0), len(0), onl(0) {}
+    UserStatsData(qint64 _cnt, qint64 _len, qint64 _onl)
+        : cnt(_cnt), len(_len), onl(_onl) {}
 
     const qint64 &count() const {return cnt;}
     const qint64 &length() const {return len;}
+    const qint64 &online() const {return onl;}
     qint64 &count() {return cnt;}
     qint64 &length() {return len;}
+    qint64 &online() {return onl;}
 };
 
 class Database;
@@ -40,6 +43,8 @@ private:
 
     typedef QPair<qint64, QByteArray> DateAndSendee;
     typedef QPair<qint64, DateAndSendee> QueueData;
+
+    QMap<qint64, qint64> onlineTime;
 
     static const int GraphDelay;
 
@@ -73,10 +78,17 @@ private:
                (static_cast<qreal>(b.first.length()) / b.first.count());
     }
 
+    static bool compareByOnline(const DataPair &a, const DataPair &b)
+    {
+        return a.first.online() > b.first.online();
+    }
+
+    void finalizeOnlineTimes();
+
 public:
     explicit Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
                         QObject *parent = 0);
-    ~Statistics();
+    void rawInput(const QString &str);
     void input1(const QString &gid, const QString &uid, const QString &str);
     void input2(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void giveStat(qint64 gid, const QString &date, const QString &factor, const QString &limit = QString(),

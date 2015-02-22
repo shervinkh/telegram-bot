@@ -16,11 +16,6 @@ Poll::Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permis
     loadData();
 }
 
-Poll::~Poll()
-{
-    saveData();
-}
-
 void Poll::loadData()
 {
     data.clear();
@@ -48,8 +43,6 @@ void Poll::loadData()
 
 void Poll::saveData()
 {
-    QSqlDatabase::database().transaction();
-
     QMapIterator<qint64, Polls> groupsIter(data);
     while (groupsIter.hasNext())
     {
@@ -72,8 +65,6 @@ void Poll::saveData()
             database->executeQuery(query);
         }
     }
-
-    QSqlDatabase::database().commit();
 }
 
 void Poll::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)

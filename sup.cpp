@@ -4,6 +4,7 @@
 #include "namedatabase.h"
 #include "subscribe.h"
 #include "permission.h"
+#include "smiley.h"
 #include <QtCore>
 #include <QSqlQuery>
 
@@ -109,8 +110,8 @@ void Sup::input(const QString &gid, const QString &uid, const QString &str, bool
                 {
                     if (addEntry(gidnum, str.mid(idx)))
                     {
+                        qDebug() << "Here adding sup...!";
                         message = "Added 'sup entry!";
-                        qDebug() << str.mid(idx).length() << " added";
                         freshSup();
 
                         QString subscribeMessage = QString("New 'Sup Entry: %1").arg(str.mid(idx));
@@ -172,13 +173,14 @@ void Sup::input(const QString &gid, const QString &uid, const QString &str, bool
                         if (!inpm)
                         {
                             lastSup[gidnum] = 0;
-                            message += QString("\n\n") + QChar(55357) + QChar(56848);
+                            message += QString("\n\n") + Smiley::pokerFace;
                         }
                     }
                 }
             }
         }
 
+        qDebug() << "sup module send message: " << (inpm ? uid : gid) << message;
         messageProcessor->sendMessage(inpm ? uid : gid, message);
 
         if (perm == 2)

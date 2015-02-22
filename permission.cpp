@@ -20,10 +20,10 @@ Permission::Permission(Database *db, NameDatabase *namedb, MessageProcessor *msg
 
 void Permission::initDefaults()
 {
-    defaultPermissions.append(PermissionId("banlist", "add", Admin, All));
-    defaultPermissions.append(PermissionId("banlist", "delete", Admin, All));
+    defaultPermissions.append(PermissionId("banlist", "add", Admin, Admin));
+    defaultPermissions.append(PermissionId("banlist", "delete", Admin, Admin));
     defaultPermissions.append(PermissionId("banlist", "view", All, All));
-    defaultPermissions.append(PermissionId("broadcast", "use", Admin, All));
+    defaultPermissions.append(PermissionId("broadcast", "use", Admin, Admin));
     defaultPermissions.append(PermissionId("calc", "use_in_group", All, NA));
     defaultPermissions.append(PermissionId("help", "use_in_group", All, NA));
     defaultPermissions.append(PermissionId("poll", "create", All, All));
@@ -40,8 +40,9 @@ void Permission::initDefaults()
     defaultPermissions.append(PermissionId("poll", "unvote", All, All));
     defaultPermissions.append(PermissionId("poll", "who", All, All));
     defaultPermissions.append(PermissionId("stat", "summary", All, All));
-    defaultPermissions.append(PermissionId("stat", "count_length_density", All, All));
+    defaultPermissions.append(PermissionId("stat", "max_lists", All, All));
     defaultPermissions.append(PermissionId("stat", "activity", All, All));
+    defaultPermissions.append(PermissionId("stat", "online_list", All, All));
     defaultPermissions.append(PermissionId("subscribe", "subscribe", All, All));
     defaultPermissions.append(PermissionId("subscribe", "unsubscribe", All, All));
     defaultPermissions.append(PermissionId("subscribe", "view", All, All));
@@ -50,6 +51,11 @@ void Permission::initDefaults()
     defaultPermissions.append(PermissionId("sup", "delete", All, All));
     defaultPermissions.append(PermissionId("sup", "edit", All, All));
     defaultPermissions.append(PermissionId("tree", "use", All, All));
+    defaultPermissions.append(PermissionId("score", "change_score", All, All));
+    defaultPermissions.append(PermissionId("score", "view_score", All, All));
+    defaultPermissions.append(PermissionId("nick", "view", All, All));
+    defaultPermissions.append(PermissionId("nick", "add", Admin, Admin));
+    defaultPermissions.append(PermissionId("nick", "delete", Admin, Admin));
 }
 
 void Permission::loadData()
@@ -97,9 +103,6 @@ void Permission::fillDefaultPermissions(qint64 gid)
 
 int Permission::getPermission(qint64 gid, const QString &mod, const QString &op, bool isAdmin, bool inpm)
 {
-    if (isAdmin)
-        return 1;
-
     if (!data[gid][mod].contains(op))
     {
         qDebug() << "Filling Default Permissions For: " << gid;
@@ -107,11 +110,13 @@ int Permission::getPermission(qint64 gid, const QString &mod, const QString &op,
         qDebug() << "Result: " << data[gid][mod].contains(op);
     }
 
-    int access = data[gid][mod][op].access();
-    int pm_access = data[gid][mod][op].pmAccess();
+    int access = inpm ? data[gid][mod][op].pmAccess() : data[gid][mod][op].access();
 
-    if (inpm && pm_access == Admin)
+    if (access == Disabled)
         return 0;
+
+    if (isAdmin)
+        return 1;
 
     if (access == RequestAdmin)
         return 2;
@@ -153,8 +158,8 @@ void Permission::input(const QString &gid, const QString &uid, const QString &st
                 int ac = fromName(args[4]);
                 int pmac = fromName(args[5]);
 
-                bool okac = ac == Admin || ac == All || ac == RequestAdmin;
-                bool okpmac = pmac == Admin || pmac == All;
+                bool okac = ac == Admin || ac == All || ac == RequestAdmin || ac == Disabled;
+                bool okpmac = pmac == Admin || pmac == All || pmac == RequestAdmin || pmac == Disabled;
 
                 if (okac && okpmac)
                 {
@@ -176,6 +181,8 @@ int Permission::fromName(QString str)
         return All;
     else if (str.toLower().startsWith("request"))
         return RequestAdmin;
+    else if (str.toLower().startsWith("disable"))
+        return Disabled;
     else if (str.toLower().startsWith("n/a"))
         return NA;
 
@@ -192,6 +199,8 @@ QString Permission::fromValue(int val)
         return "Request";
     else if (val == NA)
         return "N/A";
+    else if (val == Disabled)
+        return "Disabled";
 
     return "";
 }

@@ -51,7 +51,10 @@ void Tree::processTree()
 void Tree::processQueue()
 {
     if (queue.isEmpty())
+    {
+        queueTimer->stop();
         return;
+    }
 
     QFile file("tree.dot");
 

@@ -33,7 +33,10 @@ SOURCES += main.cpp \
     protect.cpp \
     headadmin.cpp \
     permission.cpp \
-    request.cpp
+    request.cpp \
+    score.cpp \
+    smiley.cpp \
+    nickname.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -53,4 +56,7 @@ HEADERS += \
     protect.h \
     headadmin.h \
     permission.h \
-    request.h
+    request.h \
+    score.h \
+    smiley.h \
+    nickname.h

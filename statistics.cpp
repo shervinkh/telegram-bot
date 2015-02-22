@@ -19,18 +19,13 @@ Statistics::Statistics(Database *db, NameDatabase *namedb, MessageProcessor *msg
     loadData();
 }
 
-Statistics::~Statistics()
-{
-    saveData();
-}
-
 void Statistics::loadData()
 {
     data.clear();
 
     QSqlQuery query;
 
-    query.prepare("SELECT gid, uid, date, count, length FROM tf_userstat");
+    query.prepare("SELECT gid, uid, date, count, length, online FROM tf_userstat");
     database->executeQuery(query);
 
     while (query.next())
@@ -40,15 +35,15 @@ void Statistics::loadData()
         qint64 date = query.value(2).toLongLong();
         qint64 cnt = query.value(3).toLongLong();
         qint64 len = query.value(4).toLongLong();
+        qint64 onl = query.value(5).toLongLong();
 
-        data[date][gid][uid] = UserStatsData(cnt, len);
+        data[date][gid][uid] = UserStatsData(cnt, len, onl);
     }
 }
 
 void Statistics::saveData()
 {
-    QSqlDatabase::database().transaction();
-
+    finalizeOnlineTimes();
     QMapIterator<qint64, Groups> datesIter(data);
     while (datesIter.hasNext())
     {
@@ -74,10 +69,11 @@ void Statistics::saveData()
                 query.bindValue(":date", date);
                 database->executeQuery(query);
 
-                query.prepare("UPDATE tf_userstat SET count=:cnt, length=:len WHERE gid=:gid AND "
+                query.prepare("UPDATE tf_userstat SET count=:cnt, length=:len, online=:onl WHERE gid=:gid AND "
                               "uid=:uid AND date=:date");
                 query.bindValue(":cnt", statsIter.value().count());
                 query.bindValue(":len", statsIter.value().length());
+                query.bindValue(":onl", statsIter.value().online());
                 query.bindValue(":gid", gid);
                 query.bindValue(":uid", statsIter.key());
                 query.bindValue(":date", date);
@@ -85,8 +81,48 @@ void Statistics::saveData()
             }
         }
     }
+}
 
-    QSqlDatabase::database().commit();
+void Statistics::rawInput(const QString &str)
+{
+    int idxOfUser = str.indexOf("user#");
+    if (idxOfUser != -1)
+    {
+        qint64 uid = str.mid(idxOfUser + 5, str.indexOf('\e', idxOfUser + 5) - (idxOfUser + 5)).toLongLong();
+        int idxOfMessage = str.indexOf(' ', idxOfUser);
+
+        if (idxOfMessage != -1)
+        {
+            QString message = str.mid(idxOfMessage + 1);
+            if (message.startsWith("online"))
+            {
+                if (onlineTime.contains(uid))
+                {
+                    qint64 diffTime = QDateTime::currentMSecsSinceEpoch() / 1000 - onlineTime[uid];
+                    data[QDate::currentDate().toJulianDay()][0][uid].online() += diffTime;
+                }
+                onlineTime[uid] = QDateTime::currentMSecsSinceEpoch() / 1000;
+            }
+            else if (message.startsWith("offline") && onlineTime.contains(uid))
+            {
+                qint64 diffTime = QDateTime::currentMSecsSinceEpoch() / 1000 - onlineTime[uid];
+                data[QDate::currentDate().toJulianDay()][0][uid].online() += diffTime;
+                onlineTime.remove(uid);
+            }
+        }
+    }
+}
+
+void Statistics::finalizeOnlineTimes()
+{
+    qint64 curTime = QDateTime::currentMSecsSinceEpoch() / 1000;
+
+    foreach (qint64 uid, onlineTime.keys())
+    {
+        qint64 diffTime = curTime - onlineTime[uid];
+        data[QDate::currentDate().toJulianDay()][0][uid].online() += diffTime;
+        onlineTime[uid] = curTime;
+    }
 }
 
 void Statistics::input1(const QString &gid, const QString &uid, const QString &str)
@@ -114,9 +150,35 @@ void Statistics::input2(const QString &gid, const QString &uid, const QString &s
         if (str.startsWith("!stat"))
         {
             QStringList args = str.split(' ', QString::SkipEmptyParts);
-            if (args.size() >= 3)
+
+            if (args.size() > 1 && args[1].toLower().startsWith("online"))
+            {
+                inpm = inpm || (args.size() > 2 && args[2].toLower().startsWith("pm"));
+
+                int perm = permission->getPermission(gidnum, "stat", "online_list", isAdmin, inpm);
+
+                if (perm == 1)
+                {
+                    QString message = "List of online users: ";
+                    QList<qint64> userlist = nameDatabase->userList(gidnum).keys();
+
+                    int idx = 1;
+                    foreach (qint64 uuid, onlineTime.keys())
+                        if (userlist.contains(uuid))
+                            message += QString("\n%1- %2").arg(idx++)
+                                       .arg(messageProcessor->convertToName(uuid));
+
+                    messageProcessor->sendMessage(inpm ? uid : gid, message);
+                }
+                else if (perm == 2)
+                    permission->sendRequest(gid, uid, str, inpm);
+            }
+            else if (args.size() >= 3)
+            {
+                inpm = inpm || args.last().startsWith("pm");
                 giveStat(gid.mid(5).toLongLong(), args[1], args[2], args.size() > 3 ? args[3] : "",
-                    usernum, inpm, isAdmin);
+                         usernum, inpm, isAdmin);
+            }
         }
     }
 }
@@ -143,12 +205,13 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
             }
         }
         else if (factor.toLower().startsWith("maxc") || factor.toLower().startsWith("maxl")
-                 || factor.toLower().startsWith("maxd"))
+                 || factor.toLower().startsWith("maxd") || factor.toLower().startsWith("maxo"))
         {
-            perm = permission->getPermission(gid, "stat", "count_length_density", isAdmin, inpm);
+            perm = permission->getPermission(gid, "stat", "max_lists", isAdmin, inpm);
             if (perm == 1)
             {
-                int type = factor.toLower().startsWith("maxc") ? -1 : factor.toLower().startsWith("maxd");
+                int type = factor.toLower().startsWith("maxc") ? -2 :
+                           (factor.toLower().startsWith("maxl") ? -1 : factor.toLower().startsWith("maxo"));
                 int start, end;
                 bool ok1, ok2;
 
@@ -178,12 +241,16 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                 {
                     tempList.clear();
 
-                    QMapIterator<qint64, UserStatsData> usersIter(data[dateNum][gid]);
+                    if (type == 1)
+                        finalizeOnlineTimes();
+
+                    QMapIterator<qint64, UserStatsData> usersIter(data[dateNum][(type == 1) ? 0 : gid]);
+                    QList<qint64> userlist = nameDatabase->userList(gid).keys();
                     while (usersIter.hasNext())
                     {
                         usersIter.next();
 
-                        if (usersIter.key() > 0)
+                        if (usersIter.key() > 0 && userlist.contains(usersIter.key()))
                             tempList.append(DataPair(usersIter.value(), usersIter.key()));
                     }
 
@@ -191,18 +258,30 @@ void Statistics::giveStat(qint64 gid, const QString &date, const QString &factor
                     end = qMin(end, tempList.length());
 
                     qSort(tempList.begin(), tempList.end(),
-                          (type == -1) ? compareByCount : (type ? compareByDensity : compareByLength));
+                          (type == -2) ? compareByCount : ((type == -1) ? compareByLength : (type ? compareByOnline : compareByDensity)));
 
-                    result = QString("People with most post %1 on %2:\n")
-                            .arg((type == -1) ? "count" : (type ? "density" : "length")).arg(date);
+                    result = QString("People with most %1 on %2:\n")
+                            .arg((type == -2) ? "post count" : ((type == -1) ? "post length" : (type ? "online time" : "post density")))
+                            .arg(date);
 
                     for (int i = start; i <= end; ++i)
                     {
+
                         QString number;
                         if (type == 1)
+                        {
+                            qint64 secs = tempList[i - 1].first.online();
+                            qint64 mins = secs / 60;
+                            secs %= 60;
+                            qint64 hrs = mins / 60;
+                            mins %= 60;
+
+                            number = QString("%1:%2:%3").arg(hrs, 2, 10, QChar('0')).arg(mins, 2, 10, QChar('0')).arg(secs, 2, 10, QChar('0'));
+                        }
+                        else if (type == 0)
                             number = QString::number(static_cast<qreal>(tempList[i - 1].first.length()) / tempList[i - 1].first.count(), 'f', 2);
                         else
-                            number = QString::number((type == -1) ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
+                            number = QString::number((type == -2) ? tempList[i - 1].first.count() : tempList[i - 1].first.length());
 
                         result += QString("%1- %2 (%3)").arg(i).arg(messageProcessor->convertToName(tempList[i - 1].second))
                                 .arg(number);
@@ -267,7 +346,10 @@ void Statistics::processGraph()
 void Statistics::processActivityQueue()
 {
     if (activityQueue.isEmpty())
+    {
+        activityQueueTimer->stop();
         return;
+    }
 
     qint64 gid = activityQueue.front().first;
     qint64 dateNum = activityQueue.front().second.first;

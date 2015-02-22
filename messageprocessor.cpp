@@ -6,11 +6,13 @@
 #include "broadcast.h"
 #include "subscribe.h"
 #include "headadmin.h"
+#include "nickname.h"
 #include "database.h"
 #include "banlist.h"
 #include "protect.h"
 #include "request.h"
 #include "group.h"
+#include "score.h"
 #include "help.h"
 #include "poll.h"
 #include "tree.h"
@@ -20,9 +22,11 @@
 
 const int MessageProcessor::MessageLimit = 4000;
 const qint64 MessageProcessor::keepAliveInterval = 60000;
+const int MessageProcessor::MessagesPerBurst = 25;
+const int MessageProcessor::BurstDelay = 2000;
 
 MessageProcessor::MessageProcessor(QObject *parent) :
-    QObject(parent), endDayCron(-1), headaid(-1), bid(-1), shouldRun(true), cmdContinue(false)
+    QObject(parent), headaid(-1), bid(-1), shouldRun(true), cmdContinue(false)
 {
     proc = new QProcess(this);
     hourlyCron = QTime::currentTime().hour();
@@ -35,10 +39,15 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     connect(keepAliveTimer, SIGNAL(timeout()), this, SLOT(keepAlive()));
     keepAliveTimer->start(keepAliveInterval);
 
+    cmdQueueTimer = new QTimer(this);
+    cmdQueueTimer->setInterval(BurstDelay);
+    connect(cmdQueueTimer, SIGNAL(timeout()), this, SLOT(processQueue()));
+
     database = new Database(this);
     nameDatabase = new NameDatabase(database, this, this);
     request = new Request(database, nameDatabase, this, this);
     permission = new Permission(database, nameDatabase, this, request, this);
+    nick = new Nickname(nameDatabase, database, this, permission, this);
 
     calculator = new Calculator(nameDatabase, this, permission, this);
     group = new Group(database, nameDatabase, this, this);
@@ -52,6 +61,7 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     tree = new Tree(nameDatabase, this, permission, this);
     protect = new Protect(database, nameDatabase, this, this);
     headAdmin = new HeadAdmin(database, nameDatabase, this, this);
+    score = new Score(nameDatabase, database, this, permission, nick, this);
 
     request->setSubscribe(subscribe);
 
@@ -64,6 +74,7 @@ MessageProcessor::~MessageProcessor()
 {
     shouldRun = false;
     proc->terminate();
+    saveData();
 }
 
 void MessageProcessor::loadConfig()
@@ -79,13 +90,29 @@ void MessageProcessor::loadConfig()
     }
 }
 
+void MessageProcessor::saveData()
+{
+    QSqlDatabase::database().transaction();
+    stats->saveData();
+    poll->saveData();
+    score->saveData();
+    nick->saveData();
+    QSqlDatabase::database().commit();
+}
+
 void MessageProcessor::readData()
 {
     while (proc->canReadLine())
     {
         QString str = QString::fromUtf8(proc->readLine());
-        nameDatabase->input(str);
-        protect->rawInput(str);
+
+        int cursoridx = qMax(str.indexOf("»»»"), str.indexOf(">>>"));
+        if (cursoridx == -1)
+        {
+            protect->rawInput(str);
+            nameDatabase->input(str);
+            stats->rawInput(str);
+        }
 
         if (cmdContinue)
             cmd += str;
@@ -155,7 +182,7 @@ void MessageProcessor::readData()
                                     "You can see your groups' id via \\\"!group\\\".\"");
                 }
 
-                bool isAdmin = (uidnum == headaid);
+                bool isAdmin = (uidnum == headaid) || (uidnum == bid);
                 if (nameDatabase->groups().contains(gidnum))
                     isAdmin = isAdmin || (uidnum == nameDatabase->groups()[gidnum].first);
 
@@ -172,13 +199,13 @@ void MessageProcessor::processCommand(const QString &gid, QString uid, QString c
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
 
-    if (!banlist->bannedUsers()[gidnum].contains(uidnum) || inpm)
+    if (!banlist->bannedUsers()[gidnum].contains(uidnum) || inpm || isAdmin)
     {
         help->input(gid, uid, cmd, inpm, isAdmin);
         calculator->input(gid, uid, cmd, inpm, isAdmin);
     }
 
-    if (!banlist->bannedUsers()[gidnum].contains(uidnum))
+    if (!banlist->bannedUsers()[gidnum].contains(uidnum) || isAdmin)
     {
         sup->input(gid, uid, cmd, inpm, isAdmin);
         poll->input(gid, uid, cmd, inpm, isAdmin);
@@ -187,6 +214,8 @@ void MessageProcessor::processCommand(const QString &gid, QString uid, QString c
         stats->input2(gid, uid, cmd, inpm, isAdmin);
         banlist->input(gid, uid, cmd, inpm, isAdmin);
         broadcast->input(gid, uid, cmd, inpm, isAdmin);
+        score->input(gid, uid, cmd, inpm, isAdmin);
+        nick->input(gid, uid, cmd, inpm, isAdmin);
     }
 
     permission->input(gid, uid, cmd, inpm, isAdmin);
@@ -197,34 +226,32 @@ void MessageProcessor::processCommand(const QString &gid, QString uid, QString c
 
 void MessageProcessor::keepAlive()
 {
-    qDebug() << QString("Keeping alive... (%1)").arg(QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss"))
-           << endl << flush;
+    qDebug() << QString("Keeping alive... (%1)").arg(QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss"));
     sendCommand("main_session");
+    sendCommand("status_online");
 
     if (QTime::currentTime().hour() != hourlyCron)
     {
         qDebug() << "Running Hourly Cron..." << endl << flush;
         hourlyCron = QTime::currentTime().hour();
         nameDatabase->refreshDatabase();
-        stats->saveData();
-        poll->saveData();
+        saveData();
     }
 
-    if (endDayCron == -1)
-        endDayCron = QDate::currentDate().toJulianDay();
-    else if (QDate::currentDate().toJulianDay() != endDayCron)
+    if (QTime::currentTime().hour() == 0 && QTime::currentTime().minute() == 5)
     {
         qDebug() << "Running End-day Cron..." << endl << flush;
-        endDayCron = QDate::currentDate().toJulianDay();
         foreach (qint64 gid, nameDatabase->groups().keys())
         {
             stats->giveStat(gid, "Yesterday", "summary");
             stats->giveStat(gid, "Yesterday", "maxcount", "1-10");
             stats->giveStat(gid, "Yesterday", "maxlength", "1-10");
             stats->giveStat(gid, "Yesterday", "maxdensity", "1-10");
+            stats->giveStat(gid, "Yesterday", "maxonline", "1-10");
             stats->giveStat(gid, "Yesterday", "activity");
         }
         stats->cleanUpBefore(QDate::currentDate().toJulianDay() - 3);
+        score->dailyCron();
     }
 
     keepAliveTimer->start(keepAliveInterval);
@@ -232,7 +259,9 @@ void MessageProcessor::keepAlive()
 
 void MessageProcessor::sendCommand(const QByteArray &str)
 {
-    proc->write(str + '\n');
+    cmdQueue.push_back(str);
+    if (cmdQueue.size() == 1 && !cmdQueueTimer->isActive())
+        processQueue();
 }
 
 void MessageProcessor::sendMessage(const QString &identity, QString message)
@@ -334,4 +363,26 @@ void MessageProcessor::runTelegram()
         args << "-W" << "-R" << "-I";
         proc->start(QCoreApplication::arguments()[1], args, QProcess::ReadWrite);
     }
+}
+
+void MessageProcessor::processQueue()
+{
+    if (cmdQueue.isEmpty())
+    {
+        cmdQueueTimer->stop();
+        return;
+    }
+
+    int toSend = qMin(cmdQueue.size(), MessagesPerBurst);
+
+    for (int i = 0; i < toSend; ++i)
+    {
+        QByteArray str = cmdQueue.front();
+        cmdQueue.pop_front();
+        proc->write(str + '\n');
+    }
+
+    proc->write("main_session\nstatus_online\n");
+
+    cmdQueueTimer->start();
 }

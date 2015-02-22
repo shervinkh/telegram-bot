@@ -22,14 +22,18 @@ class Protect;
 class HeadAdmin;
 class Permission;
 class Request;
+class Score;
+class Nickname;
 
-enum {Admin = 0, RequestAdmin, NA, All};
+enum {Admin = 0, RequestAdmin, NA, All, Disabled};
 
 class MessageProcessor : public QObject
 {
     Q_OBJECT
 private:
     static const int MessageLimit;
+    static const int MessagesPerBurst;
+    static const int BurstDelay;
     static const qint64 keepAliveInterval;
 
     QProcess *proc;
@@ -52,8 +56,9 @@ private:
     HeadAdmin *headAdmin;
     Permission *permission;
     Request *request;
+    Score *score;
+    Nickname *nick;
 
-    qint64 endDayCron;
     qint64 hourlyCron;
 
     qint64 headaid;
@@ -64,8 +69,12 @@ private:
     QString cmd, uid, gid;
     bool cmdContinue;
 
+    QList<QByteArray> cmdQueue;
+    QTimer *cmdQueueTimer;
+
     void processAs(const QString &gid, QString &uid, QString &str, bool inpm, bool isAdmin);
     void loadConfig();
+    void saveData();
 
 public:
     explicit MessageProcessor(QObject *parent = 0);
@@ -83,6 +92,7 @@ public slots:
     void readData();
     void keepAlive();
     void runTelegram();
+    void processQueue();
 };
 
 #endif // MESSAGEPROCESSOR_H

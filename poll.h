@@ -65,7 +65,6 @@ private:
 public:
     explicit Poll(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
                   Subscribe *sub, QObject *parent = 0);
-    ~Poll();
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void saveData();
 

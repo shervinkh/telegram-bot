@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QMap>
+#include <QSet>
 
 class Database;
 class NameDatabase;
@@ -19,9 +20,15 @@ private:
     typedef QMap<int, QString> GroupData;
     QMap<qint64, GroupData> data;
 
+    typedef QSet<qint64> UsersList;
+    QMap<qint64, UsersList> leaveData;
+
     void loadData();
     void setProtect(qint64 gid, int type, const QString &value);
     void unsetProtect(qint64 gid, int type);
+
+    void addLeaveProtect(qint64 gid, qint64 uid);
+    void delLeaveProtect(qint64 gid, qint64 uid);
 
 public:
     explicit Protect(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
