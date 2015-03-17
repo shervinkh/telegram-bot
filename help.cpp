@@ -140,10 +140,20 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
                                   "e.g. !nick 40723766 (pm)\n"
                                   "e.g. !nick add 40723766 nick_name\n"
                                   "e.g. !nick del 40723766 nick_index");
+            else if (cmd == "talk")
+                message = QString("This module reacts to some trigger texts and sends a reaction as bot's answer.\n"
+                                  "Note: %s will be replaced by sender's name. %u40723766u will be replaced by user#40723766's "
+                                  "name or nicknames.\n"
+                                  "e.g. !talk (pm)\n"
+                                  "e.g. !talk show talk_id (pm)\n"
+                                  "e.g. !talk create trigger_text\n"
+                                  "e.g. !talk text_edit talk_id new_text\n"
+                                  "e.g. !talk react_edit talk_id new_react\n"
+                                  "e.g. !talk delete talk_id");
             else
                 message = QString("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\n"
                                   "Current modules are: calc stat help sup banlist poll broadcast tree "
-                                  "subscribe group as protect headadmin permission request score nick\n"
+                                  "subscribe group as protect headadmin permission request score nick talk\n"
                                   "Enter \"!help the_module\" (e.g. !help calc) for more help.");
 
             messageProcessor->sendMessage(identity, message);

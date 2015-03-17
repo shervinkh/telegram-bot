@@ -56,6 +56,13 @@ void Permission::initDefaults()
     defaultPermissions.append(PermissionId("nick", "view", All, All));
     defaultPermissions.append(PermissionId("nick", "add", Admin, Admin));
     defaultPermissions.append(PermissionId("nick", "delete", Admin, Admin));
+    defaultPermissions.append(PermissionId("talk", "view_list", All, All));
+    defaultPermissions.append(PermissionId("talk", "show", All, All));
+    defaultPermissions.append(PermissionId("talk", "create", Admin, Admin));
+    defaultPermissions.append(PermissionId("talk", "delete", Admin, Admin));
+    defaultPermissions.append(PermissionId("talk", "text_edit", Admin, Admin));
+    defaultPermissions.append(PermissionId("talk", "react_edit", Admin, Admin));
+    defaultPermissions.append(PermissionId("talk", "talk", All, All));
 }
 
 void Permission::loadData()
@@ -164,7 +171,7 @@ void Permission::input(const QString &gid, const QString &uid, const QString &st
                 if (okac && okpmac)
                 {
                     editPermission(gidnum, module, operation, ac, pmac);
-                    message = "Successfully change the permission!";
+                    message = "Successfully changed the permission!";
                 }
             }
         }

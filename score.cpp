@@ -94,8 +94,9 @@ int Score::similarContain(QString str2, QString str1)
         for (int j = 0; j < str2.length(); ++j)
             answer[i][j] = (str1[i] == str2[j]);
 
+    int maxLen = str1.length() / RecognitionThreshold;
     int totalAnswer = 0;
-    for (int k = 0; k < str1.length() - 1; ++k)
+    for (int k = 0; k < maxLen - 1; ++k)
         for (int i = 0; i < str1.length(); ++i)
             for (int j = 0; j < str2.length(); ++j)
             {
@@ -328,6 +329,7 @@ void Score::dailyCron()
         QSqlQuery query;
         query.prepare("DELETE FROM tf_scores");
         database->executeQuery(query);
+        scoreData.clear();
         scoreData[0][0] = QDate::currentDate().toJulianDay();
     }
 }

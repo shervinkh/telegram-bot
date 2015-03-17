@@ -36,7 +36,8 @@ SOURCES += main.cpp \
     request.cpp \
     score.cpp \
     smiley.cpp \
-    nickname.cpp
+    nickname.cpp \
+    talk.cpp
 
 HEADERS += \
     messageprocessor.h \
@@ -59,4 +60,5 @@ HEADERS += \
     request.h \
     score.h \
     smiley.h \
-    nickname.h
+    nickname.h \
+    talk.h

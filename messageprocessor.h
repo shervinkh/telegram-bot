@@ -24,6 +24,7 @@ class Permission;
 class Request;
 class Score;
 class Nickname;
+class Talk;
 
 enum {Admin = 0, RequestAdmin, NA, All, Disabled};
 
@@ -58,6 +59,7 @@ private:
     Request *request;
     Score *score;
     Nickname *nick;
+    Talk *talk;
 
     qint64 hourlyCron;
 

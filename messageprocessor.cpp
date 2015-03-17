@@ -15,6 +15,7 @@
 #include "score.h"
 #include "help.h"
 #include "poll.h"
+#include "talk.h"
 #include "tree.h"
 #include "sup.h"
 #include <QtCore>
@@ -62,6 +63,7 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     protect = new Protect(database, nameDatabase, this, this);
     headAdmin = new HeadAdmin(database, nameDatabase, this, this);
     score = new Score(nameDatabase, database, this, permission, nick, this);
+    talk = new Talk(nameDatabase, database, this, permission, nick, this);
 
     request->setSubscribe(subscribe);
 
@@ -216,6 +218,7 @@ void MessageProcessor::processCommand(const QString &gid, QString uid, QString c
         broadcast->input(gid, uid, cmd, inpm, isAdmin);
         score->input(gid, uid, cmd, inpm, isAdmin);
         nick->input(gid, uid, cmd, inpm, isAdmin);
+        talk->input(gid, uid, cmd, inpm, isAdmin);
     }
 
     permission->input(gid, uid, cmd, inpm, isAdmin);

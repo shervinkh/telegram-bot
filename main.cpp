@@ -3,6 +3,7 @@
 #include "messageprocessor.h"
 #include "signalhandler.h"
 #include <QDebug>
+#include <QDateTime>
 
 int main(int argc, char *argv[])
 {
@@ -10,6 +11,8 @@ int main(int argc, char *argv[])
 
     if (QCoreApplication::arguments().length() < 2)
         qFatal("Specify telegram-cli executable path.");
+
+    qsrand(QDateTime::currentMSecsSinceEpoch() / 1000);
 
     SignalHandler signalHandler;
     MessageProcessor MP;

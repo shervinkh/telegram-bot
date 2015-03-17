@@ -126,7 +126,7 @@ void Nickname::input(const QString &gid, const QString &uid, const QString &str,
         }
         else
         {
-            inpm = inpm || (args.size() > 1 && args.last().toLower().startsWith("pm"));
+            inpm = inpm || (args.size() > 1 && args[1].startsWith("pm"));
 
             perm = permission->getPermission(gidnum, "nick", "view", isAdmin, inpm);
 
