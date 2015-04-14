@@ -114,7 +114,7 @@ int Score::similarContain(QString str2, QString str1)
 
 int Score::isLikeOrDislike(QString &str)
 {
-    QStringList args = str.split(' ', QString::SkipEmptyParts);
+    QStringList args = str.replace('\n', ' ').replace('\t', ' ').split(' ', QString::SkipEmptyParts);
 
     if (str.contains(Smiley::like))
     {

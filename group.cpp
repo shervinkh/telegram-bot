@@ -94,7 +94,7 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
                     gids.append(curgid);
 
             if (gids.isEmpty())
-                message = "Your're not a memeber of groups I manage!";
+                message = "Your're not a member of groups I manage!";
             else
             {
                 message = QString("Your groups:");
