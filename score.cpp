@@ -251,7 +251,7 @@ void Score::input(const QString &gid, const QString &uid, QString str, bool inpm
                     if (ok1 && ok2 && nameDatabase->userList(gidnum).contains(uid))
                     {
                         scoreData[gidnum][uid] += diff;
-                        message = QString("Recorded %1 score for %2")
+                        message = QString("Recorded %1 score for %2.")
                                 .arg(diff)
                                 .arg(messageProcessor->convertToName(uid));
                     }
