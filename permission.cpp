@@ -53,6 +53,7 @@ void Permission::initDefaults()
     defaultPermissions.append(PermissionId("tree", "use", All, All));
     defaultPermissions.append(PermissionId("score", "change_score", All, All));
     defaultPermissions.append(PermissionId("score", "view_score", All, All));
+    defaultPermissions.append(PermissionId("score", "direct_change_score", Admin, Admin));
     defaultPermissions.append(PermissionId("nick", "view", All, All));
     defaultPermissions.append(PermissionId("nick", "add", Admin, Admin));
     defaultPermissions.append(PermissionId("nick", "delete", Admin, Admin));

@@ -237,6 +237,26 @@ void Score::input(const QString &gid, const QString &uid, QString str, bool inpm
                     }
                 }
             }
+            else if (args.size() > 3 && args[1].toLower().startsWith("change"))
+            {
+                perm = permission->getPermission(gidnum, "score", "direct_change_score", isAdmin, inpm);
+
+                if (perm == 1)
+                {
+                    bool ok1, ok2;
+
+                    qint64 uid = args[2].toLongLong(&ok1);
+                    int diff = args[3].toInt(&ok2);
+
+                    if (ok1 && ok2 && nameDatabase->userList(gidnum).contains(uid))
+                    {
+                        scoreData[gidnum][uid] += diff;
+                        message = QString("Recorded %1 score for %2")
+                                .arg(diff)
+                                .arg(messageProcessor->convertToName(uid));
+                    }
+                }
+            }
         }
 
         int likeOrDislike = isLikeOrDislike(str);

@@ -133,7 +133,8 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
                                   " and like and dislike smileys.\n"
                                   "e.g. !score view all (pm)\n"
                                   "e.g. !score view 2-5\n"
-                                  "e.g. !score view 5");
+                                  "e.g. !score view 5\n"
+                                  "e.g. !score change user_id diff");
             else if (cmd == "nick")
                 message = QString("This module assign members nicknames to be used in score system or other things.\n"
                                   "e.g. !nick (pm)\n"
