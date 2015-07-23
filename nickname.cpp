@@ -37,6 +37,11 @@ void Nickname::loadData()
     }
 }
 
+void Nickname::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Nickname::saveData()
 {
     QMapIterator<qint64, Users> groupsIter(data);

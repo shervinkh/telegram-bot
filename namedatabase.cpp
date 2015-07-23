@@ -25,10 +25,29 @@ void NameDatabase::loadData()
     refreshDatabase();
 }
 
+void NameDatabase::groupDeleted(qint64 gid)
+{
+    monitoringGroups.remove(gid);
+    ids.remove(gid);
+
+    QSet<qint64> currentUsers;
+    foreach (qint64 gid, monitoringGroups.keys())
+        currentUsers += ids[gid].keys().toSet();
+    currentUsers.insert(messageProcessor->headAdminId());
+    currentUsers.insert(messageProcessor->bffId());
+    currentUsers.insert(messageProcessor->botId());
+
+    foreach (qint64 invalidUser, (data.keys().toSet() - currentUsers))
+        data.remove(invalidUser);
+}
+
 void NameDatabase::refreshDatabase()
 {
     foreach (qint64 gid, monitoringGroups.keys())
         refreshGroup(gid);
+    refreshUser(messageProcessor->headAdminId());
+    refreshUser(messageProcessor->bffId());
+    refreshUser(messageProcessor->botId());
 }
 
 void NameDatabase::refreshGroup(qint64 gid)

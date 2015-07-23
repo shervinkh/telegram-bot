@@ -33,6 +33,12 @@ void Protect::loadData()
         leaveData[query.value(0).toLongLong()].insert(query.value(1).toLongLong());
 }
 
+void Protect::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+    leaveData.remove(gid);
+}
+
 void Protect::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();

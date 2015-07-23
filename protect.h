@@ -34,6 +34,7 @@ public:
     explicit Protect(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void rawInput(const QString &str);
+    void groupDeleted(qint64 gid);
 
 public slots:
 };

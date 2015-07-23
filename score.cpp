@@ -5,6 +5,7 @@
 #include "permission.h"
 #include "smiley.h"
 #include "nickname.h"
+#include "bff.h"
 #include <QtCore>
 #include <QSqlQuery>
 
@@ -15,7 +16,8 @@ const qreal Score::RecognitionThreshold = 0.70;
 const qreal Score::EPS = 1e-8;
 
 Score::Score(NameDatabase *namedb, Database *db, MessageProcessor *msgproc, Permission *perm, Nickname *nck, QObject *parent)
-    : QObject(parent), nameDatabase(namedb), database(db), messageProcessor(msgproc), permission(perm), nick(nck)
+    : QObject(parent), nameDatabase(namedb), database(db), messageProcessor(msgproc), permission(perm), nick(nck),
+      bff(0)
 {
     loadData();
 }
@@ -40,6 +42,11 @@ void Score::loadData()
 
     if (!scoreData[0].contains(0))
         scoreData[0][0] = QDate::currentDate().toJulianDay();
+}
+
+void Score::groupDeleted(qint64 gid)
+{
+    scoreData.remove(gid);
 }
 
 void Score::saveData()
@@ -262,70 +269,19 @@ void Score::input(const QString &gid, const QString &uid, QString str, bool inpm
         int likeOrDislike = isLikeOrDislike(str);
         if (likeOrDislike && uidnum != messageProcessor->botId())
         {
-            int numMsgs = msgs[gidnum].size();
-            int maxMatch = 0;
-            qreal maxRatio = 0;
-            int matchIdx = -1;
-            QString filteredStr = filterString(str);
+            perm = permission->getPermission(gidnum, "score", "change_score", isAdmin, inpm);
 
-            for (int i = numMsgs - 1; i >= 0; --i)
+            if (perm == 1)
             {
-                qint64 tuid = msgs[gidnum][i].uid();
-
-                if (tuid != uidnum && !msgs[gidnum][i].likedUsers().contains(uidnum))
+                qint64 tuid = processScoreMessage(gidnum, uidnum, str, likeOrDislike);
+                if (tuid != -1)
                 {
-                    QList<QString> usernames = nick->nickNames(gidnum, tuid);
-                    usernames.prepend(messageProcessor->convertToName(tuid));
-
-                    foreach (QString username, usernames)
-                    {
-                        QString firstName;
-                        int firstNameIdx = username.indexOf(' ');
-                        if (firstNameIdx != -1)
-                            firstName = filterString(username.mid(0, firstNameIdx));
-
-                        username = filterString(username);
-
-                        int recognition = similarContain(filteredStr, username);
-                        qreal ratio = static_cast<qreal>(recognition) / username.size();
-
-                        if (!firstName.isEmpty())
-                        {
-                            int newRecognition = similarContain(filteredStr, firstName);
-                            qreal newRatio = static_cast<qreal>(newRecognition) / firstName.size();
-
-                            if (newRecognition > recognition || (newRecognition == recognition && newRatio > ratio)
-                                || (newRatio + EPS > RecognitionThreshold && ratio + EPS < RecognitionThreshold))
-                            {
-                                recognition = newRecognition;
-                                ratio = newRatio;
-                            }
-                        }
-
-                        if (recognition > maxMatch || (recognition == maxMatch && ratio > maxRatio)
-                            || (ratio + EPS > RecognitionThreshold && maxRatio + EPS < RecognitionThreshold))
-                        {
-                            maxMatch = recognition;
-                            maxRatio = ratio;
-                            matchIdx = i;
-                        }
-                    }
-                }
-            }
-
-            if (matchIdx != -1 && maxRatio + EPS > RecognitionThreshold)
-            {
-                perm = permission->getPermission(gidnum, "score", "change_score", isAdmin, inpm);
-
-                if (perm == 1)
-                {
-                    qint64 tuid = msgs[gidnum][matchIdx].uid();
                     QString username = messageProcessor->convertToName(tuid);
-
-                    msgs[gidnum][matchIdx].likedUsers().append(uidnum);
-                    scoreData[gidnum][tuid] += likeOrDislike;
                     message = "Recorded " + QString::number(likeOrDislike) + " score for " + username + ".";
-                }
+                    if (uidnum == messageProcessor->bffId())
+                        bff->BFFScoresTrigger(inpm ? uid : gid, gidnum, tuid, likeOrDislike);
+                    if (tuid == messageProcessor->bffId())
+                        bff->BFFGetScoredTrigger(inpm ? uid : gid, gidnum, uidnum, likeOrDislike);                    }
             }
         }
 
@@ -352,4 +308,79 @@ void Score::dailyCron()
         scoreData.clear();
         scoreData[0][0] = QDate::currentDate().toJulianDay();
     }
+}
+
+qint64 Score::processScoreMessage(qint64 gidnum, qint64 uidnum, const QString &str, int diff)
+{
+    int numMsgs = msgs[gidnum].size();
+    int maxMatch = 0;
+    qreal maxRatio = 0;
+    int matchIdx = -1;
+    QString filteredStr = filterString(str);
+
+    for (int i = numMsgs - 1; i >= 0; --i)
+    {
+        qint64 tuid = msgs[gidnum][i].uid();
+
+        if (tuid != uidnum && !msgs[gidnum][i].likedUsers().contains(uidnum))
+        {
+            QList<QString> usernames = nick->nickNames(gidnum, tuid);
+            usernames.prepend(messageProcessor->convertToName(tuid));
+
+            foreach (QString username, usernames)
+            {
+                QString firstName;
+                int firstNameIdx = username.indexOf(' ');
+                if (firstNameIdx != -1)
+                    firstName = filterString(username.mid(0, firstNameIdx));
+
+                username = filterString(username);
+
+                int recognition = similarContain(filteredStr, username);
+                qreal ratio = static_cast<qreal>(recognition) / username.size();
+
+                if (!firstName.isEmpty())
+                {
+                    int newRecognition = similarContain(filteredStr, firstName);
+                    qreal newRatio = static_cast<qreal>(newRecognition) / firstName.size();
+
+                    if (newRecognition > recognition || (newRecognition == recognition && newRatio > ratio)
+                        || (newRatio + EPS > RecognitionThreshold && ratio + EPS < RecognitionThreshold))
+                    {
+                        recognition = newRecognition;
+                        ratio = newRatio;
+                    }
+                }
+
+                if (recognition > maxMatch || (recognition == maxMatch && ratio > maxRatio)
+                    || (ratio + EPS > RecognitionThreshold && maxRatio + EPS < RecognitionThreshold))
+                {
+                    maxMatch = recognition;
+                    maxRatio = ratio;
+                    matchIdx = i;
+                }
+            }
+        }
+    }
+
+    if (matchIdx != -1 && maxRatio + EPS > RecognitionThreshold)
+    {
+        qint64 tuid = msgs[gidnum][matchIdx].uid();
+
+        if (uidnum != -1)
+            msgs[gidnum][matchIdx].likedUsers().append(uidnum);
+
+        scoreData[gidnum][tuid] += diff;
+
+        return tuid;
+    }
+
+    return -1;
+}
+
+void Score::modifyScore(qint64 gidnum, qint64 uidnum, int diff)
+{
+    if (nameDatabase->groups().keys().contains(gidnum) &&
+        nameDatabase->userList(gidnum).keys().contains(uidnum))
+        scoreData[gidnum][uidnum] += diff;
 }

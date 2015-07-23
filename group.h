@@ -26,6 +26,7 @@ public:
     explicit Group(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObject *parent = 0);
     void input(const QString &gid, const QString &uid, const QString &str);
     qint64 groupForUser(qint64 uid);
+    void groupDeleted(qint64 gid);
 
 public slots:
 

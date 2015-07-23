@@ -95,6 +95,7 @@ public:
                   qint64 uid = -1, bool inpm = false, bool isAdmin = true);
     void cleanUpBefore(qint64 date);
     void saveData();
+    void groupDeleted(qint64 gid);
 
 public slots:
     void processGraph();

@@ -79,6 +79,7 @@ public:
     int getPermission(qint64 gid, const QString &mod, const QString &op, bool isAdmin, bool inpm);
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void sendRequest(const QString &gid, const QString &uid, const QString &cmd, bool inpm);
+    void groupDeleted(qint64 gid);
 
 public slots:
 };

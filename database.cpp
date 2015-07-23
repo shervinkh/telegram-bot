@@ -79,6 +79,10 @@ void Database::prepareDatabase()
     query.prepare("CREATE TABLE IF NOT EXISTS tf_talk (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                   "gid INTEGER, text TEXT, react TEXT)");
     executeQuery(query);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS tf_bff (gid INTEGER, name TEXT, value INTEGER, "
+                  "PRIMARY KEY (gid, name))");
+    executeQuery(query);
 }
 
 void Database::deleteGroup(qint64 gid)
@@ -134,6 +138,10 @@ void Database::deleteGroup(qint64 gid)
     executeQuery(query);
 
     query.prepare("DELETE FROM tf_talk WHERE gid=:gid");
+    query.bindValue(":gid", gid);
+    executeQuery(query);
+
+    query.prepare("DELETE FROM tf_bff WHERE gid=:gid");
     query.bindValue(":gid", gid);
     executeQuery(query);
 }

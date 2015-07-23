@@ -55,6 +55,7 @@ public:
     explicit Sup(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm,
                  Subscribe *sub, QObject *parent = 0);
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
+    void groupDeleted(qint64 gid);
 
 public slots:
 

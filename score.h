@@ -10,6 +10,7 @@ class Database;
 class MessageProcessor;
 class Permission;
 class Nickname;
+class BFF;
 
 class MessageData
 {
@@ -40,6 +41,7 @@ private:
     MessageProcessor *messageProcessor;
     Permission *permission;
     Nickname *nick;
+    BFF *bff;
 
     typedef QList<MessageData> MessageDatas;
     QMap<qint64, MessageDatas> msgs;
@@ -63,6 +65,10 @@ public:
     void saveData();
     void input(const QString &gid, const QString &uid, QString str, bool inpm, bool isAdmin);
     void dailyCron();
+    qint64 processScoreMessage(qint64 gidnum, qint64 uidnum, const QString &str, int diff);
+    void modifyScore(qint64 gidnum, qint64 uidnum, int diff);
+    void setBFF(BFF *_bff) {bff = _bff;}
+    void groupDeleted(qint64 gid);
 
 public slots:
 };

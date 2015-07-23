@@ -31,6 +31,7 @@ public:
                      QObject *parent = 0);
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     const QMap<qint64, Users> &bannedUsers() const {return banned;}
+    void groupDeleted(qint64 gid);
 
 public slots:
 

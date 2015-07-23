@@ -51,6 +51,7 @@ public:
     void addRequest(const QString &gid, const QString &uid, const QString &cmd, bool inpm);
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void setSubscribe(Subscribe *sub) {subscribe = sub;}
+    void groupDeleted(qint64 gid);
 
 public slots:
 };

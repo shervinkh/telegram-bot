@@ -41,6 +41,7 @@ public:
     const QMap<qint64, GroupData> &groups() const {return monitoringGroups;}
     const QMap<qint64, QString> &nameDatabase() const {return data;}
     UserList userList(qint64 gid) const {return ids[gid];}
+    void groupDeleted(qint64 gid);
 };
 
 #endif // NAMEDATABASE_H

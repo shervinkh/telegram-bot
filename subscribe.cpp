@@ -14,12 +14,19 @@ Subscribe::Subscribe(Database *db, NameDatabase *namedb, MessageProcessor *msgpr
 
 void Subscribe::loadData()
 {
+    data.clear();
+
     QSqlQuery query;
     query.prepare("SELECT gid, uid FROM tf_subscribe");
     database->executeQuery(query);
 
     while (query.next())
         data[query.value(0).toLongLong()].append(query.value(1).toLongLong());
+}
+
+void Subscribe::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
 }
 
 void Subscribe::addUser(qint64 gid, qint64 uid)

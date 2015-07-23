@@ -25,6 +25,7 @@ class Request;
 class Score;
 class Nickname;
 class Talk;
+class BFF;
 
 enum {Admin = 0, RequestAdmin, NA, All, Disabled};
 
@@ -60,11 +61,13 @@ private:
     Score *score;
     Nickname *nick;
     Talk *talk;
+    BFF *bff;
 
     qint64 hourlyCron;
 
     qint64 headaid;
     qint64 bid;
+    qint64 bffid;
 
     bool shouldRun;
 
@@ -86,9 +89,11 @@ public:
     void processCommand(const QString &gid, QString uid, QString cmd, bool inpm, bool isAdmin);
     qint64 headAdminId() const {return headaid;}
     qint64 botId() const {return bid;}
+    qint64 bffId() const {return bffid;}
 
     static qint64 processDate(const QString &str);
     QString convertToName(qint64 id);
+    void groupDeleted(qint64 gid);
 
 public slots:
     void readData();

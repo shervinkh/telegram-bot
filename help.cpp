@@ -12,6 +12,7 @@ Help::Help(NameDatabase *namedb, MessageProcessor *msgproc, Permission *perm, QO
 void Help::input(const QString &gid, const QString &uid, const QString &msg, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
+    qint64 uidnum = uid.mid(5).toLongLong();
 
     if (msg.startsWith("!help"))
     {
@@ -151,11 +152,23 @@ void Help::input(const QString &gid, const QString &uid, const QString &msg, boo
                                   "e.g. !talk text_edit talk_id new_text\n"
                                   "e.g. !talk react_edit talk_id new_react\n"
                                   "e.g. !talk delete talk_id");
+            else if (cmd == "bff" && uidnum == messageProcessor->bffId())
+                message = QString("This module defines a bff for bot.\n"
+                                  "e.g. !bff\n"
+                                  "e.g. !bff group on\n"
+                                  "e.g. !bff group off\n"
+                                  "e.g. !bff private on\n"
+                                  "e.g. !bff private off\n"
+                                  "e.g. !bff private config\n"
+                                  "e.g. !bff group config set sensitivity 2");
             else
-                message = QString("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\n"
-                                  "Current modules are: calc stat help sup banlist poll broadcast tree "
-                                  "subscribe group as protect headadmin permission request score nick talk\n"
-                                  "Enter \"!help the_module\" (e.g. !help calc) for more help.");
+            {
+                QString preMessage("Telegram-Bot (https://github.com/shervinkh/telegram-bot)\n"
+                                   "Current modules are: calc stat help sup banlist poll broadcast tree "
+                                   "subscribe group as protect headadmin permission request score nick talk%1\n"
+                                   "Enter \"!help the_module\" (e.g. !help calc) for more help.");
+                message = preMessage.arg((uidnum == messageProcessor->bffId()) ? " bff" : "");
+            }
 
             messageProcessor->sendMessage(identity, message);
         }

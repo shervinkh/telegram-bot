@@ -16,12 +16,19 @@ BanList::BanList(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, 
 
 void BanList::loadData()
 {
+    banned.clear();
+
     QSqlQuery query;
     query.prepare("SELECT gid, uid FROM tf_banned");
     database->executeQuery(query);
 
     while (query.next())
         banned[query.value(0).toLongLong()].insert(query.value(1).toLongLong());
+}
+
+void BanList::groupDeleted(qint64 gid)
+{
+    banned.remove(gid);
 }
 
 void BanList::addBan(qint64 gid, qint64 uid)

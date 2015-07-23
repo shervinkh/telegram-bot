@@ -17,6 +17,7 @@
 #include "poll.h"
 #include "talk.h"
 #include "tree.h"
+#include "bff.h"
 #include "sup.h"
 #include <QtCore>
 #include <QSqlQuery>
@@ -27,7 +28,7 @@ const int MessageProcessor::MessagesPerBurst = 25;
 const int MessageProcessor::BurstDelay = 2000;
 
 MessageProcessor::MessageProcessor(QObject *parent) :
-    QObject(parent), headaid(-1), bid(-1), shouldRun(true), cmdContinue(false)
+    QObject(parent), headaid(-1), bid(-1), bffid(-1), shouldRun(true), cmdContinue(false)
 {
     proc = new QProcess(this);
     hourlyCron = QTime::currentTime().hour();
@@ -64,8 +65,10 @@ MessageProcessor::MessageProcessor(QObject *parent) :
     headAdmin = new HeadAdmin(database, nameDatabase, this, this);
     score = new Score(nameDatabase, database, this, permission, nick, this);
     talk = new Talk(nameDatabase, database, this, permission, nick, this);
+    bff = new BFF(nameDatabase, database, this, score, this);
 
     request->setSubscribe(subscribe);
+    score->setBFF(bff);
 
     loadConfig();
 
@@ -82,13 +85,14 @@ MessageProcessor::~MessageProcessor()
 void MessageProcessor::loadConfig()
 {
     QSqlQuery query;
-    query.prepare("SELECT headadmin_id, bot_id FROM tf_config");
+    query.prepare("SELECT headadmin_id, bot_id, bff_id FROM tf_config");
     database->executeQuery(query);
 
     if (query.next())
     {
         headaid = query.value(0).toLongLong();
         bid = query.value(1).toLongLong();
+        bffid = query.value(2).toLongLong();
     }
 }
 
@@ -160,6 +164,7 @@ void MessageProcessor::readData()
             {
                 QString identity = gid.isNull() ? uid : gid;
                 qDebug() << "Got From " << identity << ':' << cmd;
+                //qDebug() << "Test: " << cmd.size() << cmd[0].unicode() << cmd[1].unicode();
 
                 qint64 uidnum = uid.mid(5).toLongLong();
                 qint64 gidnum = gid.mid(5).toLongLong();
@@ -184,7 +189,7 @@ void MessageProcessor::readData()
                                     "You can see your groups' id via \\\"!group\\\".\"");
                 }
 
-                bool isAdmin = (uidnum == headaid) || (uidnum == bid);
+                bool isAdmin = (uidnum == headaid) || (uidnum == bid) || (uidnum == bffid);
                 if (nameDatabase->groups().contains(gidnum))
                     isAdmin = isAdmin || (uidnum == nameDatabase->groups()[gidnum].first);
 
@@ -224,6 +229,7 @@ void MessageProcessor::processCommand(const QString &gid, QString uid, QString c
     permission->input(gid, uid, cmd, inpm, isAdmin);
     protect->input(gid, uid, cmd, inpm, isAdmin);
     headAdmin->input(gid, uid, cmd, inpm);
+    bff->input(gid, uid, cmd, inpm);
     request->input(gid, uid, cmd, inpm, isAdmin);
 }
 
@@ -329,6 +335,7 @@ QString MessageProcessor::convertToName(qint64 id)
 void MessageProcessor::processAs(const QString &gid, QString &uid, QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();
+    qint64 uidnum = uid.mid(5).toLongLong();
 
     QString respondTo = inpm ? uid : gid;
 
@@ -341,7 +348,8 @@ void MessageProcessor::processAs(const QString &gid, QString &uid, QString &str,
             bool ok;
             qint64 targetuid = args[1].toLongLong(&ok);
 
-            if (ok && nameDatabase->userList(gidnum).keys().contains(targetuid))
+            if (ok && nameDatabase->userList(gidnum).keys().contains(targetuid) &&
+                (targetuid != bffid || uidnum == headaid))
             {
                 int idx = str.indexOf(' ', str.indexOf(args[1]));
                 while (idx < str.size() && str[idx] == ' ')
@@ -388,4 +396,22 @@ void MessageProcessor::processQueue()
     proc->write("main_session\nstatus_online\n");
 
     cmdQueueTimer->start();
+}
+
+void MessageProcessor::groupDeleted(qint64 gid)
+{
+    nameDatabase->groupDeleted(gid);
+    request->groupDeleted(gid);
+    permission->groupDeleted(gid);
+    nick->groupDeleted(gid);
+    group->groupDeleted(gid);
+    subscribe->groupDeleted(gid);
+    stats->groupDeleted(gid);
+    sup->groupDeleted(gid);
+    banlist->groupDeleted(gid);
+    poll->groupDeleted(gid);
+    protect->groupDeleted(gid);
+    score->groupDeleted(gid);
+    talk->groupDeleted(gid);
+    bff->groupDeleted(gid);
 }

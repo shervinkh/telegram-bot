@@ -43,6 +43,11 @@ void Sup::loadData()
     }
 }
 
+void Sup::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Sup::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();

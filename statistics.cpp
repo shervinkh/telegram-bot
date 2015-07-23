@@ -41,6 +41,11 @@ void Statistics::loadData()
     }
 }
 
+void Statistics::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Statistics::saveData()
 {
     finalizeOnlineTimes();

@@ -36,6 +36,11 @@ void Talk::loadData()
     }
 }
 
+void Talk::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Talk::input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin)
 {
     qint64 gidnum = gid.mid(5).toLongLong();

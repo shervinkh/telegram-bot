@@ -86,6 +86,11 @@ void Permission::loadData()
     }
 }
 
+void Permission::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Permission::fillDefaultPermissions(qint64 gid)
 {
     QSqlDatabase::database().transaction();
@@ -100,10 +105,10 @@ void Permission::fillDefaultPermissions(qint64 gid)
         query.bindValue(":operation", perm.operation());
         query.bindValue(":access", perm.access());
         query.bindValue(":pm_access", perm.pmAccess());
-
-        data[gid][perm.module()][perm.operation()] = PermissionData(perm.access(), perm.pmAccess());
-
         database->executeQuery(query);
+
+        if (query.numRowsAffected() != 0)
+            data[gid][perm.module()][perm.operation()] = PermissionData(perm.access(), perm.pmAccess());
     }
 
     QSqlDatabase::database().commit();

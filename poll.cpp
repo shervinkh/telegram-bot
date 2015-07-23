@@ -41,6 +41,11 @@ void Poll::loadData()
     }
 }
 
+void Poll::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Poll::saveData()
 {
     QMapIterator<qint64, Polls> groupsIter(data);

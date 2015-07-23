@@ -16,7 +16,8 @@ void HeadAdmin::input(const QString &gid, const QString &uid, const QString &str
     qint64 gidnum = gid.mid(5).toLongLong();
     qint64 uidnum = uid.mid(5).toLongLong();
 
-    if (uidnum == messageProcessor->headAdminId() && str.startsWith("!headadmin"))
+    if ((uidnum == messageProcessor->headAdminId() || uidnum == messageProcessor->bffId()) &&
+        str.startsWith("!headadmin"))
     {
         QStringList args = str.split(' ', QString::SkipEmptyParts);
         QString message;

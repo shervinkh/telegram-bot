@@ -36,6 +36,7 @@ public:
     void saveData();
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     Nicks nickNames(qint64 gid, qint64 uid) {if (data[gid].contains(uid)) return data[gid][uid]; else return Nicks();}
+    void groupDeleted(qint64 gid);
 
 public slots:
 };

@@ -61,6 +61,7 @@ public:
     explicit Talk(NameDatabase *namedb, Database *db, MessageProcessor *msgproc, Permission *perm,
                   Nickname *nick, QObject *parent = 0);
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
+    void groupDeleted(qint64 gid);
 
 public slots:
 };

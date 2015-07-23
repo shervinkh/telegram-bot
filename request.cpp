@@ -34,6 +34,11 @@ void Request::loadData()
     }
 }
 
+void Request::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
+}
+
 void Request::addRequest(const QString &gid, const QString &uid, const QString &cmd, bool inpm)
 {
     qint64 gidnum = gid.mid(5).toLongLong();

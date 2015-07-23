@@ -14,12 +14,19 @@ Group::Group(Database *db, NameDatabase *namedb, MessageProcessor *msgproc, QObj
 
 void Group::loadData()
 {
+    data.clear();
+
     QSqlQuery query;
     query.prepare("SELECT uid, gid FROM tf_usergroups");
     database->executeQuery(query);
 
     while (query.next())
         data[query.value(0).toLongLong()] = query.value(1).toLongLong();
+}
+
+void Group::groupDeleted(qint64 gid)
+{
+    data.remove(gid);
 }
 
 void Group::input(const QString &gid, const QString &uid, const QString &str)
@@ -40,7 +47,8 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
             qint64 id = args[2].toLongLong(&ok);
 
             if (ok && nameDatabase->groups().keys().contains(id) &&
-               (nameDatabase->userList(id).contains(uidnum) || uidnum == messageProcessor->headAdminId()))
+               (nameDatabase->userList(id).contains(uidnum) || uidnum == messageProcessor->headAdminId() ||
+                uidnum == messageProcessor->bffId()))
             {
                 setGroup(uidnum, id);
                 message = QString("Your group has been set to %1 (%2).").arg(id)
@@ -58,7 +66,8 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
             qint64 id = args[2].toLongLong(&ok);
 
             if (ok && nameDatabase->groups().keys().contains(id) &&
-                (nameDatabase->userList(id).contains(uidnum) || uidnum == messageProcessor->headAdminId()))
+                (nameDatabase->userList(id).contains(uidnum) || uidnum == messageProcessor->headAdminId() ||
+                 uidnum == messageProcessor->bffId()))
             {
                 qint64 adminid = nameDatabase->groups()[id].first;
 
@@ -69,11 +78,13 @@ void Group::input(const QString &gid, const QString &uid, const QString &str)
                 {
                     QString title;
                     if (curuid == messageProcessor->botId())
-                        title = " (The Bot)";
+                        title += " (The Bot)";
                     if (curuid == adminid)
-                        title = " (Group's Bot Admin)";
+                        title += " (Group's Bot Admin)";
                     if (curuid == messageProcessor->headAdminId())
-                        title = " (Bot's Head Admin)";
+                        title += " (Bot's Head Admin)";
+                    if (curuid == messageProcessor->bffId())
+                        title += " (Bot's BFF)";
 
                     message += QString("%1- %2 (%3)%4").arg(idx).arg(curuid)
                                                        .arg(messageProcessor->convertToName(curuid))

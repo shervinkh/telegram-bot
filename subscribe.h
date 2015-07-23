@@ -31,6 +31,7 @@ public:
     void input(const QString &gid, const QString &uid, const QString &str, bool inpm, bool isAdmin);
     void postToSubscribed(qint64 gid, const QString &str);
     void postToSubscribedAdmin(qint64 gid, const QString &str);
+    void groupDeleted(qint64 gid);
 
 public slots:
 
